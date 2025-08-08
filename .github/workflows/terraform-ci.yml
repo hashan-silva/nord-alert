@@ -1,0 +1,50 @@
+name: Terraform Lint & Validate
+
+on:
+  pull_request:
+    paths:
+      - "**/*.tf"
+      - ".tflint.hcl"
+  push:
+    branches: [ main ]
+    paths:
+      - "**/*.tf"
+      - ".tflint.hcl"
+
+jobs:
+  tf-ci:
+    runs-on: ubuntu-latest
+
+    # If your Terraform lives in a subfolder (e.g., infra/), change this path.
+    defaults:
+      run:
+        shell: bash
+        working-directory: .
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          # terraform_version: 1.8.5   # (optional) pin a version
+
+      - name: Terraform fmt (check only)
+        run: terraform fmt -check -diff -recursive
+
+      - name: Terraform init (no backend auth)
+        run: terraform init -backend=false -input=false
+
+      - name: Terraform validate
+        run: terraform validate -no-color
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: TFLint init
+        run: tflint --init
+
+      - name: TFLint (recursive)
+        run: tflint -f compact --recursive
