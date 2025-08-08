@@ -73,7 +73,7 @@ The backend retrieves information from a number of official Swedish services:
 
 ### Deployment
 
-The repository includes a GitHub Actions workflow that builds the backend Docker image, pushes it to Docker Hub, and deploys it to Fly.io on every push to `main`. Configure the following secrets in your repository settings:
+The repository includes a GitHub Actions workflow that builds the backend Docker image, pushes it to Docker Hub, and uses Terraform to deploy it to Oracle Cloud on every push to `main`. Configure the following secrets in your repository settings:
 
 - `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for Docker Hub access.
-- `FLY_API_TOKEN` for Fly.io deployments.
+- `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_PRIVATE_KEY`, `OCI_REGION`, and `OCI_COMPARTMENT_OCID` for Oracle Cloud deployments.
