@@ -1,23 +1,19 @@
-name: Terraform Lint & Validate
-permissions:
-  contents: read
+name: Terraform Lint & Validate (PRs)
 
 on:
   pull_request:
-    paths:
-      - "**/*.tf"
-      - ".tflint.hcl"
-  push:
-    branches: [ main ]
-    paths:
-      - "**/*.tf"
-      - ".tflint.hcl"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: terraform-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   tf-ci:
+    if: ${{ github.event.pull_request.head.ref != 'main' }}
     runs-on: ubuntu-latest
 
-    # If your Terraform lives in a subfolder (e.g., infra/), change this path.
+    # change if your TF lives in a subfolder (e.g., infra/)
     defaults:
       run:
         shell: bash
@@ -31,12 +27,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-          # terraform_version: 1.8.5   # (optional) pin a version
 
       - name: Terraform fmt (check only)
         run: terraform fmt -check -diff -recursive
 
-      - name: Terraform init (no backend auth)
+      - name: Terraform init (no backend)
         run: terraform init -backend=false -input=false
 
       - name: Terraform validate
