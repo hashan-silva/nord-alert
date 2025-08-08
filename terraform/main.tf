@@ -1,6 +1,3 @@
-############################################
-# Terraform & Provider
-############################################
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -19,9 +16,6 @@ provider "oci" {
   region        = var.region
 }
 
-############################################
-# Data: availability domains & image lookup
-############################################
 data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
 }
@@ -36,9 +30,8 @@ data "oci_core_images" "ubuntu" {
   sort_order               = "DESC"
 }
 
-############################################
-# Networking (VCN, IGW, Route Table, Subnet, Security List)
-############################################
+# ---- Networking (VCN, IGW, Route Table, Subnet, Security List) ----
+
 resource "oci_core_virtual_network" "vcn" {
   compartment_id = var.compartment_ocid
   cidr_block     = var.vcn_cidr
@@ -80,21 +73,30 @@ resource "oci_core_security_list" "sl" {
   ingress_security_rules {
     protocol = "6" # TCP
     source   = var.ssh_ingress_cidr
-    tcp_options { min = 22, max = 22 }
+    tcp_options {
+      min = 22
+      max = 22
+    }
   }
 
   # Ingress: HTTP (80)
   ingress_security_rules {
     protocol = "6"
     source   = var.http_ingress_cidr
-    tcp_options { min = 80, max = 80 }
+    tcp_options {
+      min = 80
+      max = 80
+    }
   }
 
   # Ingress: HTTPS (443)
   ingress_security_rules {
     protocol = "6"
     source   = var.https_ingress_cidr
-    tcp_options { min = 443, max = 443 }
+    tcp_options {
+      min = 443
+      max = 443
+    }
   }
 }
 
@@ -110,9 +112,8 @@ resource "oci_core_subnet" "public" {
   dns_label                   = "pub"
 }
 
-############################################
-# Cloud-init: install Docker & run your image
-############################################
+# ---- Cloud-init: install Docker & run your image ----
+
 locals {
   cloud_init = <<-EOT
     #cloud-config
@@ -126,9 +127,8 @@ locals {
   EOT
 }
 
-############################################
-# Compute Instance (Always Free E2 Micro)
-############################################
+# ---- Compute Instance (Always Free E2 Micro) ----
+
 resource "oci_core_instance" "vm" {
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   compartment_id      = var.compartment_ocid
