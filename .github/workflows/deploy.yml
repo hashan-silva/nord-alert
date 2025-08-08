@@ -25,10 +25,19 @@ jobs:
           context: ./backend
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/nord-alert-backend:latest
-      - name: Set up Flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@v1
-      - name: Deploy to Fly.io
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+      - name: Terraform Apply
+        working-directory: terraform
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          flyctl deploy --config fly.toml --image ${{ secrets.DOCKERHUB_USERNAME }}/nord-alert-backend:latest --remote-only
+          TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+          TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
+          TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+          TF_VAR_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_region: ${{ secrets.OCI_REGION }}
+          TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
+          TF_VAR_image: ${{ secrets.DOCKERHUB_USERNAME }}/nord-alert-backend:latest
+        run: terraform apply -auto-approve
