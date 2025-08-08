@@ -16,8 +16,21 @@ provider "oci" {
   region        = var.region
 }
 
+data "oci_identity_availability_domains" "ads" {
+  compartment_id = var.tenancy_ocid
+}
+
+data "oci_core_vcns" "vcns" {
+  compartment_id = var.compartment_ocid
+}
+
+data "oci_core_subnets" "selected" {
+  compartment_id = var.compartment_ocid
+  vcn_id         = data.oci_core_vcns.vcns.virtual_networks[0].id
+}
+
 resource "oci_container_instances_container_instance" "app" {
-  availability_domain = var.availability_domain
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   compartment_id       = var.compartment_ocid
   display_name         = "nord-alert"
   shape                = var.shape
@@ -29,7 +42,7 @@ resource "oci_container_instances_container_instance" "app" {
 
   vnics {
     is_public_ip_enabled = true
-    subnet_id            = var.subnet_ocid
+    subnet_id            = data.oci_core_subnets.selected.subnets[0].id
   }
 
   containers {
