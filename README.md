@@ -2,6 +2,7 @@
 
 NordAlert is a cross-platform mobile application that aggregates and pushes official alerts from Polisen (the Swedish Police Authority), SMHI (Swedish Meteorological and Hydrological Institute) weather warnings, and Krisinformation (Swedish Crisis Information).
 
+[![Build and Deploy Backend](https://github.com/hashan-silva/nord-alert/actions/workflows/deploy.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/deploy.yml)
 [![Build and Analyze](https://github.com/hashan-silva/nord-alert/actions/workflows/build.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/build.yml)
 [![CodeQL](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql)
 
@@ -76,5 +77,3 @@ The repository includes a GitHub Actions workflow that builds the backend Docker
 
 - `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for Docker Hub access.
 - `FLY_API_TOKEN` for Fly.io deployments.
-
-The backend Docker build runs `npm ci`, so the repository tracks `backend/package-lock.json` to ensure deterministic installs.

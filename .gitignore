@@ -9,6 +9,7 @@
 
 # Node backend
 backend/node_modules/
+backend/package-lock.json
 backend/dist/
 
 
