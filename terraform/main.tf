@@ -35,7 +35,6 @@ resource "oci_container_instances_container_instance" "app" {
   containers {
     display_name = "nord-alert-backend"
     image_url    = var.image
-
     resource_config {
       memory_limit_in_gbs = 1
       vcpus_limit         = 1
