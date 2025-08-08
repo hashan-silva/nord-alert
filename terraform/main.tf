@@ -41,8 +41,8 @@ resource "oci_container_instances_container_instance" "app" {
   }
 
   vnics {
-    is_public_ip_enabled = true
-    subnet_id            = data.oci_core_subnets.selected.subnets[0].id
+    assign_public_ip = true
+    subnet_id        = data.oci_core_subnets.selected.subnets[0].id
   }
 
   containers {
