@@ -7,6 +7,10 @@
 .buildlog/
 .history
 
+# Node backend
+backend/node_modules/
+backend/dist/
+
 
 
 # Flutter repo-specific
