@@ -1,4 +1,6 @@
 name: Terraform Lint & Validate
+permissions:
+  contents: read
 
 on:
   pull_request:
