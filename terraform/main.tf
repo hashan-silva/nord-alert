@@ -9,11 +9,11 @@ terraform {
 }
 
 provider "oci" {
-  tenancy_ocid  = var.tenancy_ocid
-  user_ocid     = var.user_ocid
-  fingerprint   = var.fingerprint
-  private_key   = var.private_key
-  region        = var.region
+  tenancy_ocid = var.tenancy_ocid
+  user_ocid    = var.user_ocid
+  fingerprint  = var.fingerprint
+  private_key  = var.private_key
+  region       = var.region
 }
 
 data "oci_identity_availability_domains" "ads" {
@@ -101,15 +101,15 @@ resource "oci_core_security_list" "sl" {
 }
 
 resource "oci_core_subnet" "public" {
-  compartment_id              = var.compartment_ocid
-  vcn_id                      = oci_core_virtual_network.vcn.id
-  display_name                = "nord-alert-public-subnet"
-  cidr_block                  = var.public_subnet_cidr
-  route_table_id              = oci_core_route_table.rt.id
-  security_list_ids           = [oci_core_security_list.sl.id]
-  prohibit_public_ip_on_vnic  = false
-  dhcp_options_id             = oci_core_virtual_network.vcn.default_dhcp_options_id
-  dns_label                   = "pub"
+  compartment_id             = var.compartment_ocid
+  vcn_id                     = oci_core_virtual_network.vcn.id
+  display_name               = "nord-alert-public-subnet"
+  cidr_block                 = var.public_subnet_cidr
+  route_table_id             = oci_core_route_table.rt.id
+  security_list_ids          = [oci_core_security_list.sl.id]
+  prohibit_public_ip_on_vnic = false
+  dhcp_options_id            = oci_core_virtual_network.vcn.default_dhcp_options_id
+  dns_label                  = "pub"
 }
 
 # ---- Cloud-init: install Docker & run your image ----
