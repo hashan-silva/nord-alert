@@ -1,3 +1,6 @@
+############################################
+# Terraform & Provider
+############################################
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -16,11 +19,19 @@ provider "oci" {
   region       = var.region
 }
 
+############################################
+# Data: ADs, existing VCNs, image lookup
+############################################
 data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
 }
 
-# Find a recent Ubuntu 22.04 image compatible with the selected shape
+# Look for any existing VCNs in the compartment
+data "oci_core_vcns" "existing" {
+  compartment_id = var.compartment_ocid
+}
+
+# Choose Ubuntu 22.04 for the selected shape
 data "oci_core_images" "ubuntu" {
   compartment_id           = var.compartment_ocid
   operating_system         = "Canonical Ubuntu"
@@ -30,90 +41,130 @@ data "oci_core_images" "ubuntu" {
   sort_order               = "DESC"
 }
 
-# ---- Networking (VCN, IGW, Route Table, Subnet, Security List) ----
-
+############################################
+# VCN: reuse if found; otherwise create one
+############################################
 resource "oci_core_virtual_network" "vcn" {
+  count          = length(data.oci_core_vcns.existing.virtual_networks) == 0 ? 1 : 0
   compartment_id = var.compartment_ocid
   cidr_block     = var.vcn_cidr
   display_name   = "nord-alert-vcn"
   dns_label      = "nordalert"
 }
 
-resource "oci_core_internet_gateway" "igw" {
+# Pick the VCN id (existing or newly created)
+locals {
+  vcn_id = length(data.oci_core_vcns.existing.virtual_networks) > 0 ? data.oci_core_vcns.existing.virtual_networks[0].id : oci_core_virtual_network.vcn[0].id
+}
+
+############################################
+# Internet Gateway: reuse or create
+############################################
+data "oci_core_internet_gateways" "existing" {
   compartment_id = var.compartment_ocid
+  vcn_id         = local.vcn_id
+}
+
+resource "oci_core_internet_gateway" "igw" {
+  count          = length(data.oci_core_internet_gateways.existing.internet_gateways) == 0 ? 1 : 0
+  compartment_id = var.compartment_ocid
+  vcn_id         = local.vcn_id
   display_name   = "nord-alert-igw"
-  vcn_id         = oci_core_virtual_network.vcn.id
   enabled        = true
 }
 
+locals {
+  igw_id = length(data.oci_core_internet_gateways.existing.internet_gateways) > 0 ? data.oci_core_internet_gateways.existing.internet_gateways[0].id : oci_core_internet_gateway.igw[0].id
+}
+
+############################################
+# Our own route table (points to IGW)
+############################################
 resource "oci_core_route_table" "rt" {
   compartment_id = var.compartment_ocid
-  vcn_id         = oci_core_virtual_network.vcn.id
+  vcn_id         = local.vcn_id
   display_name   = "nord-alert-rt"
 
   route_rules {
-    network_entity_id = oci_core_internet_gateway.igw.id
     destination       = "0.0.0.0/0"
     destination_type  = "CIDR_BLOCK"
+    network_entity_id = local.igw_id
   }
 }
 
-resource "oci_core_security_list" "sl" {
+############################################
+# Public subnet (ours; avoids changing existing)
+############################################
+resource "oci_core_subnet" "public" {
+  compartment_id             = var.compartment_ocid
+  vcn_id                     = local.vcn_id
+  display_name               = "nord-alert-public-subnet"
+  cidr_block                 = var.public_subnet_cidr
+  route_table_id             = oci_core_route_table.rt.id
+  prohibit_public_ip_on_vnic = false
+  # Use the VCN's default DHCP opts & security list automatically
+  dns_label = "pub"
+}
+
+############################################
+# NSG for the instance (ingress 22/80/443)
+############################################
+resource "oci_core_network_security_group" "web" {
   compartment_id = var.compartment_ocid
-  vcn_id         = oci_core_virtual_network.vcn.id
-  display_name   = "nord-alert-sl"
+  vcn_id         = local.vcn_id
+  display_name   = "nord-alert-web-nsg"
+}
 
-  # Egress: allow all
-  egress_security_rules {
-    protocol    = "all"
-    destination = "0.0.0.0/0"
-  }
-
-  # Ingress: SSH (22)
-  ingress_security_rules {
-    protocol = "6" # TCP
-    source   = var.ssh_ingress_cidr
-    tcp_options {
+resource "oci_core_network_security_group_security_rule" "ingress_ssh" {
+  network_security_group_id = oci_core_network_security_group.web.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source                    = var.ssh_ingress_cidr
+  tcp_options {
+    destination_port_range {
       min = 22
       max = 22
     }
   }
+}
 
-  # Ingress: HTTP (80)
-  ingress_security_rules {
-    protocol = "6"
-    source   = var.http_ingress_cidr
-    tcp_options {
+resource "oci_core_network_security_group_security_rule" "ingress_http" {
+  network_security_group_id = oci_core_network_security_group.web.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source                    = var.http_ingress_cidr
+  tcp_options {
+    destination_port_range {
       min = 80
       max = 80
     }
   }
+}
 
-  # Ingress: HTTPS (443)
-  ingress_security_rules {
-    protocol = "6"
-    source   = var.https_ingress_cidr
-    tcp_options {
+resource "oci_core_network_security_group_security_rule" "ingress_https" {
+  network_security_group_id = oci_core_network_security_group.web.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source                    = var.https_ingress_cidr
+  tcp_options {
+    destination_port_range {
       min = 443
       max = 443
     }
   }
 }
 
-resource "oci_core_subnet" "public" {
-  compartment_id             = var.compartment_ocid
-  vcn_id                     = oci_core_virtual_network.vcn.id
-  display_name               = "nord-alert-public-subnet"
-  cidr_block                 = var.public_subnet_cidr
-  route_table_id             = oci_core_route_table.rt.id
-  security_list_ids          = [oci_core_security_list.sl.id]
-  prohibit_public_ip_on_vnic = false
-  dhcp_options_id            = oci_core_virtual_network.vcn.default_dhcp_options_id
-  dns_label                  = "pub"
+# Allow all egress
+resource "oci_core_network_security_group_security_rule" "egress_all" {
+  network_security_group_id = oci_core_network_security_group.web.id
+  direction                 = "EGRESS"
+  protocol                  = "all"
+  destination               = "0.0.0.0/0"
 }
 
-# ---- Cloud-init: install Docker & run your image ----
-
+############################################
+# Cloud-init: install Docker & run your image
+############################################
 locals {
   cloud_init = <<-EOT
     #cloud-config
@@ -127,8 +178,9 @@ locals {
   EOT
 }
 
-# ---- Compute Instance (Always Free E2 Micro) ----
-
+############################################
+# Compute Instance (Always Free E2 Micro)
+############################################
 resource "oci_core_instance" "vm" {
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   compartment_id      = var.compartment_ocid
@@ -144,6 +196,7 @@ resource "oci_core_instance" "vm" {
     subnet_id        = oci_core_subnet.public.id
     assign_public_ip = true
     hostname_label   = "nordalert"
+    nsg_ids          = [oci_core_network_security_group.web.id]
   }
 
   metadata = {
