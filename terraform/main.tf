@@ -20,18 +20,18 @@ provider "oci" {
 }
 
 ############################################
-# Data lookups (no creation of networking)
+# Data: ADs, existing VCNs, image lookup
 ############################################
 data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
 }
 
-# Existing subnet you supply (must be PUBLIC)
-data "oci_core_subnet" "existing" {
-  subnet_id = var.existing_subnet_ocid
+# Look for any existing VCNs in the compartment
+data "oci_core_vcns" "existing" {
+  compartment_id = var.compartment_ocid
 }
 
-# Find a recent Ubuntu 22.04 image compatible with the selected shape
+# Choose Ubuntu 22.04 for the selected shape
 data "oci_core_images" "ubuntu" {
   compartment_id           = var.compartment_ocid
   operating_system         = "Canonical Ubuntu"
@@ -39,6 +39,131 @@ data "oci_core_images" "ubuntu" {
   shape                    = var.compute_shape
   sort_by                  = "TIMECREATED"
   sort_order               = "DESC"
+}
+
+############################################
+# VCN: reuse if found; otherwise create one
+############################################
+resource "oci_core_virtual_network" "vcn" {
+  count         = length(data.oci_core_vcns.existing.virtual_networks) == 0 ? 1 : 0
+  compartment_id = var.compartment_ocid
+  cidr_block     = var.vcn_cidr
+  display_name   = "nord-alert-vcn"
+  dns_label      = "nordalert"
+}
+
+# Pick the VCN id (existing or newly created)
+locals {
+  vcn_id = length(data.oci_core_vcns.existing.virtual_networks) > 0 ?
+    data.oci_core_vcns.existing.virtual_networks[0].id :
+    oci_core_virtual_network.vcn[0].id
+}
+
+############################################
+# Internet Gateway: reuse or create
+############################################
+data "oci_core_internet_gateways" "existing" {
+  compartment_id = var.compartment_ocid
+  vcn_id         = local.vcn_id
+}
+
+resource "oci_core_internet_gateway" "igw" {
+  count          = length(data.oci_core_internet_gateways.existing.internet_gateways) == 0 ? 1 : 0
+  compartment_id = var.compartment_ocid
+  vcn_id         = local.vcn_id
+  display_name   = "nord-alert-igw"
+  enabled        = true
+}
+
+locals {
+  igw_id = length(data.oci_core_internet_gateways.existing.internet_gateways) > 0 ?
+    data.oci_core_internet_gateways.existing.internet_gateways[0].id :
+    oci_core_internet_gateway.igw[0].id
+}
+
+############################################
+# Our own route table (points to IGW)
+############################################
+resource "oci_core_route_table" "rt" {
+  compartment_id = var.compartment_ocid
+  vcn_id         = local.vcn_id
+  display_name   = "nord-alert-rt"
+
+  route_rules {
+    destination       = "0.0.0.0/0"
+    destination_type  = "CIDR_BLOCK"
+    network_entity_id = local.igw_id
+  }
+}
+
+############################################
+# Public subnet (ours; avoids changing existing)
+############################################
+resource "oci_core_subnet" "public" {
+  compartment_id              = var.compartment_ocid
+  vcn_id                      = local.vcn_id
+  display_name                = "nord-alert-public-subnet"
+  cidr_block                  = var.public_subnet_cidr
+  route_table_id              = oci_core_route_table.rt.id
+  prohibit_public_ip_on_vnic  = false
+  # Use the VCN's default DHCP opts & security list automatically
+  dns_label                   = "pub"
+}
+
+############################################
+# NSG for the instance (ingress 22/80/443)
+############################################
+resource "oci_core_network_security_group" "web" {
+  compartment_id = var.compartment_ocid
+  vcn_id         = local.vcn_id
+  display_name   = "nord-alert-web-nsg"
+}
+
+resource "oci_core_network_security_group_security_rule" "ingress_ssh" {
+  network_security_group_id = oci_core_network_security_group.web.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source                    = var.ssh_ingress_cidr
+  tcp_options {
+    destination_port_range {
+      min = 22
+      max = 22
+    }
+  }
+}
+
+resource "oci_core_network_security_group_security_rule" "ingress_http" {
+  network_security_group_id = oci_core_network_security_group.web.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source                    = var.http_ingress_cidr
+  tcp_options {
+    destination_port_range {
+      min = 80
+      max = 80
+    }
+  }
+}
+
+resource "oci_core_network_security_group_security_rule" "ingress_https" {
+  network_security_group_id = oci_core_network_security_group.web.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source                    = var.https_ingress_cidr
+  tcp_options {
+    destination_port_range {
+      min = 443
+      max = 443
+    }
+  }
+}
+
+# Allow all egress
+resource "oci_core_network_security_group_security_rule" "egress_all" {
+  network_security_group_id = oci_core_network_security_group.web.id
+  direction                 = "EGRESS"
+  protocol                  = "all"
+  destination               = "0.0.0.0/0"
 }
 
 ############################################
@@ -72,9 +197,10 @@ resource "oci_core_instance" "vm" {
   }
 
   create_vnic_details {
-    subnet_id        = data.oci_core_subnet.existing.id
+    subnet_id        = oci_core_subnet.public.id
     assign_public_ip = true
     hostname_label   = "nordalert"
+    nsg_ids          = [oci_core_network_security_group.web.id]
   }
 
   metadata = {
@@ -83,12 +209,4 @@ resource "oci_core_instance" "vm" {
   }
 
   preserve_boot_volume = false
-
-  # Safety: ensure the chosen subnet actually allows public IPs
-  lifecycle {
-    precondition {
-      condition     = data.oci_core_subnet.existing.prohibit_public_ip_on_vnic == false
-      error_message = "Selected subnet prohibits public IPs. Pick a PUBLIC subnet or enable public IPs for it."
-    }
-  }
 }
