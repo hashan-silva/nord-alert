@@ -66,7 +66,7 @@ data "oci_core_internet_gateways" "existing" {
 }
 
 resource "oci_core_internet_gateway" "igw" {
-  count          = length(data.oci_core_internet_gateways.existing) == 0 ? 1 : 0
+  count          = length(data.oci_core_internet_gateways.existing.internet_gateways) == 0 ? 1 : 0
   compartment_id = var.compartment_ocid
   vcn_id         = local.vcn_id
   display_name   = "nord-alert-igw"
@@ -74,7 +74,7 @@ resource "oci_core_internet_gateway" "igw" {
 }
 
 locals {
-  igw_id = length(data.oci_core_internet_gateways.existing) > 0 ? data.oci_core_internet_gateways.existing[0].id : oci_core_internet_gateway.igw[0].id
+    igw_id = length(data.oci_core_internet_gateways.existing.internet_gateways) > 0 ? data.oci_core_internet_gateways.existing.internet_gateways[0].id : oci_core_internet_gateway.igw[0].id
 }
 
 ############################################
