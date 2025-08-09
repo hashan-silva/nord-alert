@@ -74,7 +74,7 @@ resource "oci_core_internet_gateway" "igw" {
 }
 
 locals {
-  igw_id = length(data.oci_core_internet_gateways.existing) > 0 ? data.oci_core_internet_gateways.existing[0].id : oci_core_internet_gateway.igw[0].id
+  igw_id = length(data.oci_core_internet_gateways.existing.internet_gateways) > 0 ? data.oci_core_internet_gateways.existing.internet_gateways[0].id : oci_core_internet_gateway.igw[0].id
 }
 
 ############################################
