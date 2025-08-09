@@ -12,11 +12,11 @@ terraform {
 }
 
 provider "oci" {
-  tenancy_ocid  = var.tenancy_ocid
-  user_ocid     = var.user_ocid
-  fingerprint   = var.fingerprint
-  private_key   = var.private_key
-  region        = var.region
+  tenancy_ocid = var.tenancy_ocid
+  user_ocid    = var.user_ocid
+  fingerprint  = var.fingerprint
+  private_key  = var.private_key
+  region       = var.region
 }
 
 ############################################
@@ -45,7 +45,7 @@ data "oci_core_images" "ubuntu" {
 # VCN: reuse if found; otherwise create one
 ############################################
 resource "oci_core_virtual_network" "vcn" {
-  count         = length(data.oci_core_vcns.existing.virtual_networks) == 0 ? 1 : 0
+  count          = length(data.oci_core_vcns.existing.virtual_networks) == 0 ? 1 : 0
   compartment_id = var.compartment_ocid
   cidr_block     = var.vcn_cidr
   display_name   = "nord-alert-vcn"
@@ -54,9 +54,7 @@ resource "oci_core_virtual_network" "vcn" {
 
 # Pick the VCN id (existing or newly created)
 locals {
-  vcn_id = length(data.oci_core_vcns.existing.virtual_networks) > 0 ?
-    data.oci_core_vcns.existing.virtual_networks[0].id :
-    oci_core_virtual_network.vcn[0].id
+  vcn_id = length(data.oci_core_vcns.existing.virtual_networks) > 0 ? data.oci_core_vcns.existing.virtual_networks[0].id : oci_core_virtual_network.vcn[0].id
 }
 
 ############################################
@@ -76,9 +74,7 @@ resource "oci_core_internet_gateway" "igw" {
 }
 
 locals {
-  igw_id = length(data.oci_core_internet_gateways.existing.internet_gateways) > 0 ?
-    data.oci_core_internet_gateways.existing.internet_gateways[0].id :
-    oci_core_internet_gateway.igw[0].id
+  igw_id = length(data.oci_core_internet_gateways.existing.internet_gateways) > 0 ? data.oci_core_internet_gateways.existing.internet_gateways[0].id : oci_core_internet_gateway.igw[0].id
 }
 
 ############################################
@@ -100,14 +96,14 @@ resource "oci_core_route_table" "rt" {
 # Public subnet (ours; avoids changing existing)
 ############################################
 resource "oci_core_subnet" "public" {
-  compartment_id              = var.compartment_ocid
-  vcn_id                      = local.vcn_id
-  display_name                = "nord-alert-public-subnet"
-  cidr_block                  = var.public_subnet_cidr
-  route_table_id              = oci_core_route_table.rt.id
-  prohibit_public_ip_on_vnic  = false
+  compartment_id             = var.compartment_ocid
+  vcn_id                     = local.vcn_id
+  display_name               = "nord-alert-public-subnet"
+  cidr_block                 = var.public_subnet_cidr
+  route_table_id             = oci_core_route_table.rt.id
+  prohibit_public_ip_on_vnic = false
   # Use the VCN's default DHCP opts & security list automatically
-  dns_label                   = "pub"
+  dns_label = "pub"
 }
 
 ############################################
