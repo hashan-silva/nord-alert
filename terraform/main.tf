@@ -209,4 +209,14 @@ resource "oci_core_instance" "vm" {
   }
 
   preserve_boot_volume = false
+
+  lifecycle {
+    # Avoid recreation when the latest image ID changes or when
+    # OCI normalizes user_data on the instance. This keeps the
+    # instance in place on repeated terraform apply runs.
+    ignore_changes = [
+      source_details[0].source_id,
+      metadata["user_data"],
+    ]
+  }
 }
