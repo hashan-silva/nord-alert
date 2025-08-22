@@ -17,19 +17,49 @@ export interface SmhiWarning {
  */
 export async function fetchSmhiWarnings(): Promise<SmhiWarning[]> {
   const { body } = await request(
-    'https://opendata-download-warnings.smhi.se/api/category/severe-weather/version/2/warning.json'
+    'https://opendata-download-warnings.smhi.se/ibww/api/version/1/warning.json'
   );
-  const data = (await body.json()) as any;
-  const warnings = data?.warnings ?? [];
-  return warnings.map((w: any) => ({
-    source: 'smhi',
-    id: w.id ?? w.identifier,
-    eventType: w.event ?? w.title ?? '',
-    level: (w.level ?? w.severity ?? '').toLowerCase(),
-    description: w.description ?? '',
-    areas: (w.areas ?? []).map((a: any) => a.area ?? a.name ?? a),
-    validFrom: new Date(w.start ?? w.validFrom ?? w.from),
-    validTo: new Date(w.end ?? w.validTo ?? w.to),
-    url: w.urls?.[0]?.url ?? w.url ?? '',
-  }));
+  const data = (await body.json()) as any[];
+  const warnings: SmhiWarning[] = [];
+
+  for (const w of data ?? []) {
+    const eventType = w.event?.en ?? w.event?.sv ?? w.event?.code ?? '';
+
+    for (const area of w.warningAreas ?? []) {
+      const levelCode = (area.warningLevel?.code ?? '')
+        .toString()
+        .toLowerCase();
+      let level: 'yellow' | 'orange' | 'red' = 'yellow';
+      if (['yellow', 'orange', 'red'].includes(levelCode)) {
+        level = levelCode as 'yellow' | 'orange' | 'red';
+      } else if (levelCode === 'message') {
+        level = 'yellow';
+      }
+
+      const description = (area.descriptions ?? [])
+        .map((d: any) => d.text?.en ?? d.text?.sv ?? '')
+        .filter(Boolean)
+        .join('\n');
+
+      const areas = (area.affectedAreas ?? [])
+        .map((a: any) => a.en ?? a.sv ?? '')
+        .filter(Boolean);
+
+      warnings.push({
+        source: 'smhi',
+        id: `${w.id}-${area.id}`,
+        eventType,
+        level,
+        description,
+        areas,
+        validFrom: new Date(area.approximateStart ?? area.published ?? w.created),
+        validTo: new Date(
+          area.approximateEnd ?? area.approximateStart ?? area.published ?? w.created
+        ),
+        url: '',
+      });
+    }
+  }
+
+  return warnings;
 }
