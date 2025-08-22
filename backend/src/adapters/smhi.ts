@@ -17,7 +17,7 @@ export interface SmhiWarning {
  */
 export async function fetchSmhiWarnings(): Promise<SmhiWarning[]> {
   const { body } = await request(
-    'https://opendata-download-warnings.smhi.se/warnings/objects'
+    'https://opendata-download-warnings.smhi.se/ibww/api/version/1/warning.json'
   );
   const data = (await body.json()) as any[];
   const warnings: SmhiWarning[] = [];
