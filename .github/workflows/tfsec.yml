@@ -1,0 +1,24 @@
+permissions:
+  contents: read
+name: tfsec (PRs)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: tfsec-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tfsec:
+    if: ${{ github.event.pull_request.head.ref != 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1
+        with:
+          working_directory: terraform
