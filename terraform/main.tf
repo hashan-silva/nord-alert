@@ -26,12 +26,10 @@ data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
 }
 
-# Look for any existing VCNs in the compartment
 data "oci_core_vcns" "existing" {
   compartment_id = var.compartment_ocid
 }
 
-# Choose Ubuntu 22.04 for the selected shape
 data "oci_core_images" "ubuntu" {
   compartment_id           = var.compartment_ocid
   operating_system         = "Canonical Ubuntu"
@@ -52,7 +50,6 @@ resource "oci_core_virtual_network" "vcn" {
   dns_label      = "nordalert"
 }
 
-# Pick the VCN id (existing or newly created)
 locals {
   vcn_id = length(data.oci_core_vcns.existing.virtual_networks) > 0 ? data.oci_core_vcns.existing.virtual_networks[0].id : oci_core_virtual_network.vcn[0].id
 }
@@ -66,7 +63,7 @@ data "oci_core_internet_gateways" "existing" {
 }
 
 locals {
-  existing_igws = try(data.oci_core_internet_gateways.existing.internet_gateways, [])
+  existing_igws = try(data.oci_core_internet_gateways.existing.gateways, [])
   igw_id        = length(local.existing_igws) > 0 ? local.existing_igws[0].id : oci_core_internet_gateway.igw[0].id
 }
 
@@ -103,8 +100,7 @@ resource "oci_core_subnet" "public" {
   cidr_block                 = var.public_subnet_cidr
   route_table_id             = oci_core_route_table.rt.id
   prohibit_public_ip_on_vnic = false
-  # Use the VCN's default DHCP opts & security list automatically
-  dns_label = "pub"
+  dns_label                  = "pub"
 }
 
 ############################################
@@ -155,7 +151,6 @@ resource "oci_core_network_security_group_security_rule" "ingress_https" {
   }
 }
 
-# Allow all egress
 resource "oci_core_network_security_group_security_rule" "egress_all" {
   network_security_group_id = oci_core_network_security_group.web.id
   direction                 = "EGRESS"
@@ -208,9 +203,6 @@ resource "oci_core_instance" "vm" {
   preserve_boot_volume = false
 
   lifecycle {
-    # Avoid recreation when the latest image ID changes or when
-    # OCI normalizes user_data on the instance. This keeps the
-    # instance in place on repeated terraform apply runs.
     ignore_changes = [
       source_details[0].source_id,
       metadata["user_data"],
