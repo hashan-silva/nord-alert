@@ -63,6 +63,25 @@ npm run start
 
 The API exposes a `/alerts` endpoint which accepts optional `county` and `severity` query parameters for filtering.
 
+### Mobile (Flutter)
+
+Quickly scaffold and run a simple client to list and filter alerts by county and provider.
+
+1) Create the app (if `mobile/` is missing):
+   - `flutter create mobile`
+   - `cd mobile`
+2) Add minimal deps:
+   - `flutter pub add dio flutter_bloc equatable`
+3) Configure backend URL at run time:
+   - Android emulator: `flutter run --dart-define=BACKEND_BASE_URL=http://10.0.2.2:3000`
+   - iOS simulator/Web: `flutter run --dart-define=BACKEND_BASE_URL=http://localhost:3000`
+4) Fetch alerts from: `${BACKEND_BASE_URL}/alerts?county=Stockholm&severity=medium`
+
+Notes
+- Filter by provider client‑side using the `source` field (`polisen`, `smhi`, `krisinformation`).
+- A simple model matches the backend JSON: `{ id, source, headline, description, areas, severity, publishedAt, url }`.
+- For production, store `BACKEND_BASE_URL` per‑flavor, and add caching/offline as needed.
+
 ### Data Sources
 
 The backend retrieves information from a number of official Swedish services:
