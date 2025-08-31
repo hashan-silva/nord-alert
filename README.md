@@ -71,7 +71,13 @@ This repo includes a minimal Flutter client in `mobile/` to list alerts and filt
 - Run (emulator):
   - Android: `cd mobile && flutter pub get && flutter run --dart-define=BACKEND_BASE_URL=http://10.0.2.2:3000`
   - iOS/Web: `flutter run --dart-define=BACKEND_BASE_URL=http://localhost:3000`
-- Run (physical device): use the in‑app Settings panel (top‑right gear) to enter your backend base URL (e.g., `http://<LAN-IP>:3000`). Use “Test” to verify connectivity, then Save.
+- Run (physical Android/iOS device):
+  - Ensure phone and backend host are on the same Wi‑Fi/LAN.
+  - Start backend listening on all interfaces (e.g., Docker run with `-p 3000:3000`). Allow firewall on port 3000.
+  - Find your computer’s LAN IP (e.g., `ipconfig` on Windows; `ifconfig`/`ip addr` on macOS/Linux).
+  - Launch the app (`flutter run -d <device>`). Open Settings (top‑right gear), enter `http://<LAN-IP>:3000`, tap Test, then Save.
+  - Android 9+ cleartext HTTP: if requests fail, set `android:usesCleartextTraffic="true"` in `android/app/src/main/AndroidManifest.xml` (dev only), or use HTTPS.
+  - iOS ATS: if HTTP is blocked, add a temporary ATS exception for development or use HTTPS.
 - Filtering: provider chips (Polisen/SMHI/Krisinformation) are client‑side; county dropdown refetches using the backend `county` query.
 - Data shape: `{ id, source, headline, description, areas, severity, publishedAt, url }`.
 
