@@ -7,6 +7,7 @@ NordAlert is a cross-platform mobile application that aggregates and pushes offi
 [![CodeQL](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql)
 [![Terraform Lint & Validate](https://github.com/hashan-silva/nord-alert/actions/workflows/terraform-ci.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/terraform-ci.yml)
 [![Trivy IaC Scan](https://github.com/hashan-silva/nord-alert/actions/workflows/tfsec.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/tfsec.yml)
+[![Flutter CI](https://github.com/hashan-silva/nord-alert/actions/workflows/flutter-ci.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/flutter-ci.yml)
 
 ## Features
 
@@ -63,6 +64,23 @@ npm run start
 
 The API exposes a `/alerts` endpoint which accepts optional `county` and `severity` query parameters for filtering.
 
+### Mobile (Flutter)
+
+This repo includes a minimal Flutter client in `mobile/` to list alerts and filter by county and provider.
+
+- Run (emulator):
+  - Android: `cd mobile && flutter pub get && flutter run --dart-define=BACKEND_BASE_URL=http://10.0.2.2:3000`
+  - iOS/Web: `flutter run --dart-define=BACKEND_BASE_URL=http://localhost:3000`
+- Run (physical Android/iOS device):
+  - Ensure phone and backend host are on the same Wi‑Fi/LAN.
+  - Start backend listening on all interfaces (e.g., Docker run with `-p 3000:3000`). Allow firewall on port 3000.
+  - Find your computer’s LAN IP (e.g., `ipconfig` on Windows; `ifconfig`/`ip addr` on macOS/Linux).
+  - Launch the app (`flutter run -d <device>`). Open Settings (top‑right gear), enter `http://<LAN-IP>:3000`, tap Test, then Save.
+  - Android 9+ cleartext HTTP: if requests fail, set `android:usesCleartextTraffic="true"` in `android/app/src/main/AndroidManifest.xml` (dev only), or use HTTPS.
+  - iOS ATS: if HTTP is blocked, add a temporary ATS exception for development or use HTTPS.
+- Filtering: provider chips (Polisen/SMHI/Krisinformation) are client‑side; county dropdown refetches using the backend `county` query.
+- Data shape: `{ id, source, headline, description, areas, severity, publishedAt, url }`.
+
 ### Data Sources
 
 The backend retrieves information from a number of official Swedish services:
@@ -73,9 +91,12 @@ The backend retrieves information from a number of official Swedish services:
 - **SCB PxWeb** – region lists (county and municipality codes/names)
 - **County Administrative Boards ArcGIS** – GeoJSON polygons for counties and municipalities
 
-### Deployment
+### Deployment & CI
 
-The repository includes a GitHub Actions workflow that builds the backend Docker image, pushes it to Docker Hub, and uses Terraform to deploy it to Oracle Cloud on every push to `main`. Configure the following secrets in your repository settings:
+GitHub Actions builds and pushes the backend Docker image (tagged with commit SHA) and deploys it to Oracle Cloud via Terraform on pushes to `main`.
 
-- `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for Docker Hub access.
-- `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_PRIVATE_KEY`, `OCI_REGION`, and `OCI_COMPARTMENT_OCID` for Oracle Cloud deployments. Terraform automatically determines the availability domain and subnet.
+- Workflows: Deploy (`deploy.yml`), Sonar (`build.yml`), Terraform lint/validate, tfsec (SARIF → Code Scanning), and Flutter CI for `mobile/`.
+- Terraform: provisions VCN, subnet, IGW/route, NSG, and a VM; cloud‑init installs Docker and runs the container mapping port 80 → 3000.
+- Docker: runs as non‑root `node` user and exposes `/health` for container health checks.
+- Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_PRIVATE_KEY`, `OCI_REGION`, `OCI_COMPARTMENT_OCID`, `SSH_PUBLIC_KEY`.
+- Recommendation: use a remote Terraform backend to persist state across runs for reliable, incremental applies.
