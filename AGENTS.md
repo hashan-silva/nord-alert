@@ -41,6 +41,15 @@
   - `tfsec .` (security scanning)
 - If modifying Dockerfile, build locally: `docker build backend` and confirm server responds: `docker run -p 3000:3000 <image>` then `curl http://localhost:3000/alerts`.
 
+## Branching & PR Policy
+- Do not commit directly to `main`. Create feature branches (e.g., `feat/...`, `fix/...`, `chore/...`).
+- Open a PR to `main` with a clear description, verification steps, and linked issues.
+- Wait for CI (build, tfsec, tflint, Terraform validate) to pass before merging.
+
+## Terraform State & Idempotency
+- CI deployments rely on Terraform state to avoid re-creating resources. Configure a remote backend (e.g., Terraform Cloud) so subsequent `apply` runs update existing resources.
+- Without a remote backend, each clean CI run may treat the infra as new. Use a backend to ensure stable, incremental applies.
+
 ## Commit & Pull Request Guidelines
 - Commits: use Conventional Commits when possible (`feat:`, `fix:`, `chore:`) and reference issues (e.g., `#23`). Keep messages imperative and concise (≤72 chars subject).
 - PRs: include a clear summary, scope of changes, verification steps (e.g., `curl "http://localhost:3000/alerts?county=Stockholm&severity=medium"`), and deployment impact. Add screenshots/logs when helpful.
