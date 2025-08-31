@@ -16,4 +16,23 @@ class AlertsApi {
     final data = resp.data as List<dynamic>;
     return data.map((e) => Alert.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  Future<bool> healthCheck(String baseUrl) async {
+    try {
+      final uri = Uri.parse('$baseUrl/health');
+      final resp = await _dio.getUri(
+        uri,
+        options: Options(
+          followRedirects: false,
+          validateStatus: (code) => code != null && code >= 200 && code < 500,
+          sendTimeout: const Duration(seconds: 3),
+          receiveTimeout: const Duration(seconds: 3),
+          connectTimeout: const Duration(seconds: 3),
+        ),
+      );
+      return resp.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }
