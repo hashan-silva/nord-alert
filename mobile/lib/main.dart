@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'api/alerts_api.dart';
 import 'bloc/alerts_bloc.dart';
+import 'settings/settings_cubit.dart';
 import 'models/alert.dart';
 
 void main() {
@@ -14,14 +15,27 @@ class NordAlertApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NordAlert',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      home: RepositoryProvider(
-        create: (_) => AlertsApi(),
-        child: BlocProvider(
-          create: (ctx) => AlertsBloc(ctx.read<AlertsApi>())..add(const LoadAlerts()),
-          child: const AlertsPage(),
+    return MultiRepositoryProvider(
+      providers: [RepositoryProvider(create: (_) => AlertsApi())],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => SettingsCubit()..load()),
+        ],
+        child: MaterialApp(
+          title: 'NordAlert',
+          theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+          home: BlocBuilder<SettingsCubit, SettingsState>(
+            builder: (context, settings) {
+              if (!settings.loaded) {
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              }
+              return BlocProvider(
+                create: (ctx) => AlertsBloc(ctx.read<AlertsApi>(), initialBaseUrl: settings.baseUrl)
+                  ..add(const LoadAlerts()),
+                child: const AlertsPage(),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -38,6 +52,11 @@ class AlertsPage extends StatelessWidget {
         title: const Text('NordAlert'),
         actions: [
           IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings),
+            onPressed: () => _openSettings(context),
+          ),
+          IconButton(
             tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
             onPressed: () => context.read<AlertsBloc>().add(LoadAlerts(county: context.read<AlertsBloc>().state.selectedCounty)),
@@ -46,6 +65,34 @@ class AlertsPage extends StatelessWidget {
       ),
       body: const _AlertsBody(),
     );
+  }
+}
+
+Future<void> _openSettings(BuildContext context) async {
+  final settings = context.read<SettingsCubit>().state;
+  final controller = TextEditingController(text: settings.baseUrl);
+  final url = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Backend Base URL'),
+      content: TextField(
+        controller: controller,
+        decoration: const InputDecoration(
+          labelText: 'e.g., http://192.168.1.100:3000',
+        ),
+        keyboardType: TextInputType.url,
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.of(ctx).pop(controller.text.trim()), child: const Text('Save')),
+      ],
+    ),
+  );
+  if (url != null && url.isNotEmpty) {
+    await context.read<SettingsCubit>().saveBaseUrl(url);
+    context.read<AlertsBloc>()
+      ..add(UpdateBaseUrl(url))
+      ..add(LoadAlerts(county: context.read<AlertsBloc>().state.selectedCounty));
   }
 }
 
@@ -209,4 +256,3 @@ class _SourceIcon extends StatelessWidget {
     }
   }
 }
-

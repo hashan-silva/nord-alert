@@ -18,6 +18,13 @@ class LoadAlerts extends AlertsEvent {
   List<Object?> get props => [county];
 }
 
+class UpdateBaseUrl extends AlertsEvent {
+  final String baseUrl;
+  const UpdateBaseUrl(this.baseUrl);
+  @override
+  List<Object?> get props => [baseUrl];
+}
+
 class UpdateFilters extends AlertsEvent {
   final String? county;
   final Set<AlertSource>? sources;
@@ -34,6 +41,7 @@ class AlertsState extends Equatable {
   final List<Alert> filtered;
   final String? selectedCounty;
   final Set<AlertSource> selectedSources;
+  final String baseUrl;
 
   const AlertsState({
     required this.loading,
@@ -42,15 +50,17 @@ class AlertsState extends Equatable {
     required this.filtered,
     required this.selectedCounty,
     required this.selectedSources,
+    required this.baseUrl,
   });
 
-  factory AlertsState.initial() => const AlertsState(
+  factory AlertsState.initial(String baseUrl) => AlertsState(
         loading: false,
         error: null,
-        all: [],
-        filtered: [],
+        all: const [],
+        filtered: const [],
         selectedCounty: null,
-        selectedSources: {AlertSource.polisen, AlertSource.smhi, AlertSource.krisinformation},
+        selectedSources: const {AlertSource.polisen, AlertSource.smhi, AlertSource.krisinformation},
+        baseUrl: baseUrl,
       );
 
   AlertsState copyWith({
@@ -60,6 +70,7 @@ class AlertsState extends Equatable {
     List<Alert>? filtered,
     String? selectedCounty,
     Set<AlertSource>? selectedSources,
+    String? baseUrl,
   }) => AlertsState(
         loading: loading ?? this.loading,
         error: error,
@@ -67,16 +78,18 @@ class AlertsState extends Equatable {
         filtered: filtered ?? this.filtered,
         selectedCounty: selectedCounty ?? this.selectedCounty,
         selectedSources: selectedSources ?? this.selectedSources,
+        baseUrl: baseUrl ?? this.baseUrl,
       );
 
   @override
-  List<Object?> get props => [loading, error, all, filtered, selectedCounty, selectedSources];
+  List<Object?> get props => [loading, error, all, filtered, selectedCounty, selectedSources, baseUrl];
 }
 
 class AlertsBloc extends Bloc<AlertsEvent, AlertsState> {
-  AlertsBloc(this._api) : super(AlertsState.initial()) {
+  AlertsBloc(this._api, {required String initialBaseUrl}) : super(AlertsState.initial(initialBaseUrl)) {
     on<LoadAlerts>(_onLoad);
     on<UpdateFilters>(_onUpdateFilters);
+    on<UpdateBaseUrl>(_onUpdateBaseUrl);
   }
 
   final AlertsApi _api;
@@ -84,7 +97,7 @@ class AlertsBloc extends Bloc<AlertsEvent, AlertsState> {
   Future<void> _onLoad(LoadAlerts e, Emitter<AlertsState> emit) async {
     emit(state.copyWith(loading: true, error: null));
     try {
-      final items = await _api.fetchAlerts(county: e.county);
+      final items = await _api.fetchAlerts(baseUrl: state.baseUrl, county: e.county);
       final filtered = _applyFilters(items, state.selectedCounty ?? e.county, state.selectedSources);
       emit(state.copyWith(
         loading: false,
@@ -96,6 +109,10 @@ class AlertsBloc extends Bloc<AlertsEvent, AlertsState> {
     } catch (err) {
       emit(state.copyWith(loading: false, error: err.toString()));
     }
+  }
+
+  void _onUpdateBaseUrl(UpdateBaseUrl e, Emitter<AlertsState> emit) {
+    emit(state.copyWith(baseUrl: e.baseUrl));
   }
 
   void _onUpdateFilters(UpdateFilters e, Emitter<AlertsState> emit) {
@@ -118,4 +135,3 @@ class AlertsBloc extends Bloc<AlertsEvent, AlertsState> {
       ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
   }
 }
-

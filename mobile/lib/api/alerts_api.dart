@@ -6,13 +6,8 @@ class AlertsApi {
 
   final Dio _dio;
 
-  static const String backendBaseUrl = String.fromEnvironment(
-    'BACKEND_BASE_URL',
-    defaultValue: 'http://localhost:3000',
-  );
-
-  Future<List<Alert>> fetchAlerts({String? county}) async {
-    final uri = Uri.parse('$backendBaseUrl/alerts').replace(
+  Future<List<Alert>> fetchAlerts({required String baseUrl, String? county}) async {
+    final uri = Uri.parse('$baseUrl/alerts').replace(
       queryParameters: {
         if (county != null && county.isNotEmpty) 'county': county,
       },
@@ -22,4 +17,3 @@ class AlertsApi {
     return data.map((e) => Alert.fromJson(e as Map<String, dynamic>)).toList();
   }
 }
-
