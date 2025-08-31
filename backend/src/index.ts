@@ -12,6 +12,10 @@ const querySchema = z.object({
 
 const severityOrder: Severity[] = ['info', 'low', 'medium', 'high'];
 
+app.get('/health', async () => {
+  return { status: 'ok' };
+});
+
 app.get('/alerts', async (request, reply) => {
   const { county, severity } = querySchema.parse(request.query);
   const alerts = await fetchAllAlerts();

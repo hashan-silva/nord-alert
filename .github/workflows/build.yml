@@ -1,4 +1,6 @@
 name: Build and Analyze
+permissions:
+  contents: read
 on:
   push:
     branches:

@@ -8,6 +8,10 @@ terraform {
       source  = "oracle/oci"
       version = "~> 5.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -20,14 +24,10 @@ provider "oci" {
 }
 
 ############################################
-# Data: ADs, existing VCNs, image lookup
+# Data: ADs and image lookup
 ############################################
 data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
-}
-
-data "oci_core_vcns" "existing" {
-  compartment_id = var.compartment_ocid
 }
 
 data "oci_core_images" "ubuntu" {
@@ -40,35 +40,31 @@ data "oci_core_images" "ubuntu" {
 }
 
 ############################################
-# VCN: reuse if found; otherwise create one
+# Dedicated VCN per deployment (avoids overlap)
 ############################################
+resource "random_string" "vcn_suffix" {
+  length  = 4
+  upper   = false
+  lower   = true
+  numeric = true
+  special = false
+}
+
 resource "oci_core_virtual_network" "vcn" {
-  count          = length(data.oci_core_vcns.existing.virtual_networks) == 0 ? 1 : 0
   compartment_id = var.compartment_ocid
   cidr_block     = var.vcn_cidr
   display_name   = "nord-alert-vcn"
-  dns_label      = "nordalert"
+  dns_label      = "nord${random_string.vcn_suffix.result}"
 }
 
 locals {
-  vcn_id = length(data.oci_core_vcns.existing.virtual_networks) > 0 ? data.oci_core_vcns.existing.virtual_networks[0].id : oci_core_virtual_network.vcn[0].id
+  vcn_id = oci_core_virtual_network.vcn.id
 }
 
 ############################################
-# Internet Gateway: reuse or create
+# Internet Gateway
 ############################################
-data "oci_core_internet_gateways" "existing" {
-  compartment_id = var.compartment_ocid
-  vcn_id         = local.vcn_id
-}
-
-locals {
-  existing_igws = try(data.oci_core_internet_gateways.existing.gateways, [])
-  igw_id        = length(local.existing_igws) > 0 ? local.existing_igws[0].id : oci_core_internet_gateway.igw[0].id
-}
-
 resource "oci_core_internet_gateway" "igw" {
-  count          = length(local.existing_igws) == 0 ? 1 : 0
   compartment_id = var.compartment_ocid
   vcn_id         = local.vcn_id
   display_name   = "nord-alert-igw"
@@ -86,7 +82,7 @@ resource "oci_core_route_table" "rt" {
   route_rules {
     destination       = "0.0.0.0/0"
     destination_type  = "CIDR_BLOCK"
-    network_entity_id = local.igw_id
+    network_entity_id = oci_core_internet_gateway.igw.id
   }
 }
 
