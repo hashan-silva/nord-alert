@@ -1,5 +1,6 @@
 permissions:
   contents: read
+  security-events: write
 name: tfsec (PRs)
 
 on:
@@ -18,7 +19,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run tfsec
-        uses: aquasecurity/tfsec-action@v1
+      - name: Run tfsec (SARIF)
+        uses: aquasecurity/tfsec-action@v2
+        continue-on-error: true
         with:
           working_directory: terraform
+          format: sarif
+          sarif_file: tfsec.sarif
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: tfsec.sarif
