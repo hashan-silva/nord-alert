@@ -7,6 +7,7 @@ NordAlert is a cross-platform mobile application that aggregates and pushes offi
 [![CodeQL](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql)
 [![Terraform Lint & Validate](https://github.com/hashan-silva/nord-alert/actions/workflows/terraform-ci.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/terraform-ci.yml)
 [![Trivy IaC Scan](https://github.com/hashan-silva/nord-alert/actions/workflows/tfsec.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/tfsec.yml)
+[![Flutter CI](https://github.com/hashan-silva/nord-alert/actions/workflows/flutter-ci.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/flutter-ci.yml)
 
 ## Features
 
