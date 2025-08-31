@@ -2,7 +2,13 @@ import 'package:dio/dio.dart';
 import '../models/alert.dart';
 
 class AlertsApi {
-  AlertsApi([Dio? client]) : _dio = client ?? Dio();
+  AlertsApi([Dio? client])
+      : _dio = client ??
+            Dio(BaseOptions(
+              // Short, sensible defaults for mobile
+              receiveTimeout: const Duration(seconds: 5),
+              sendTimeout: const Duration(seconds: 5),
+            ));
 
   final Dio _dio;
 
@@ -27,7 +33,6 @@ class AlertsApi {
           validateStatus: (code) => code != null && code >= 200 && code < 500,
           sendTimeout: const Duration(seconds: 3),
           receiveTimeout: const Duration(seconds: 3),
-          connectTimeout: const Duration(seconds: 3),
         ),
       );
       return resp.statusCode == 200;
