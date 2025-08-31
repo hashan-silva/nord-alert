@@ -40,6 +40,11 @@
   - `tflint --init && tflint -f compact --recursive`
   - `tfsec .` (security scanning)
 - If modifying Dockerfile, build locally: `docker build backend` and confirm server responds: `docker run -p 3000:3000 <image>` then `curl http://localhost:3000/alerts`.
+ - Mobile checks in `mobile/`:
+   - `flutter pub get`
+   - `dart format .` (auto-format) then `dart format --output=none --set-exit-if-changed .`
+   - `flutter analyze --fatal-infos --fatal-warnings`
+   - `flutter test`
 
 ## Branching & PR Policy
 - Do not commit directly to `main`. Create feature branches (e.g., `feat/...`, `fix/...`, `chore/...`).
