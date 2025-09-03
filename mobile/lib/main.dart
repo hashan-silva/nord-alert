@@ -200,11 +200,14 @@ class _AlertsBody extends StatelessWidget {
                       title: Text(a.headline),
                       subtitle: Text([
                         if (a.areas.isNotEmpty) a.areas.join(', '),
-                        a.severity,
                         a.publishedAt.toLocal().toString(),
                       ].where((e) => e.isNotEmpty).join(' • ')),
+                      trailing: SeverityChip(severity: a.severity),
                       onTap: () async {
-                        // noop; could launch URL
+                        if (!context.mounted) return;
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => AlertDetailsPage(alert: a)),
+                        );
                       },
                     );
                   },
@@ -224,6 +227,61 @@ class _AlertsBody extends StatelessWidget {
     }
     final list = set.toList()..sort();
     return list;
+  }
+}
+
+class AlertDetailsPage extends StatelessWidget {
+  const AlertDetailsPage({super.key, required this.alert});
+  final Alert alert;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Alert Details')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SourceIcon(source: alert.source),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    alert.headline,
+                    style: theme.textTheme.titleLarge,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                if (alert.areas.isNotEmpty)
+                  Chip(label: Text(alert.areas.join(', '))),
+                SeverityChip(severity: alert.severity),
+                Chip(label: Text(alert.publishedAt.toLocal().toString())),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if ((alert.description ?? '').isNotEmpty) ...[
+              Text('Description', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(alert.description!),
+              const SizedBox(height: 16),
+            ],
+            Text('Source', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            SelectableText(alert.url.isNotEmpty ? alert.url : 'No URL provided'),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -313,13 +371,66 @@ class _SourceIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    switch (source) {
-      case AlertSource.polisen:
-        return const CircleAvatar(child: Text('P'));
-      case AlertSource.smhi:
-        return const CircleAvatar(child: Text('S'));
-      case AlertSource.krisinformation:
-        return const CircleAvatar(child: Text('K'));
-    }
+    final color = _colorForSource(source, Theme.of(context));
+    final label = () {
+      switch (source) {
+        case AlertSource.polisen:
+          return 'P';
+        case AlertSource.smhi:
+          return 'S';
+        case AlertSource.krisinformation:
+          return 'K';
+      }
+    }();
+    return CircleAvatar(
+      backgroundColor: color,
+      foregroundColor: Colors.white,
+      child: Text(label),
+    );
   }
+}
+
+Color _colorForSource(AlertSource source, ThemeData theme) {
+  switch (source) {
+    case AlertSource.polisen:
+      return Colors.indigo;
+    case AlertSource.smhi:
+      return Colors.orange;
+    case AlertSource.krisinformation:
+      return Colors.red;
+  }
+}
+
+class SeverityChip extends StatelessWidget {
+  const SeverityChip({super.key, required this.severity});
+  final String severity;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colorForSeverity(severity);
+    return Chip(
+      label: Text(_labelForSeverity(severity)),
+      labelStyle: TextStyle(color: color, fontWeight: FontWeight.w600),
+      backgroundColor: color.withOpacity(0.12),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+String _labelForSeverity(String s) {
+  final t = s.trim();
+  if (t.isEmpty) return 'info';
+  return t;
+}
+
+Color _colorForSeverity(String s) {
+  final v = s.toLowerCase();
+  if (v.contains('extreme') || v.contains('critical')) return Colors.red;
+  if (v.contains('severe') || v.contains('major') || v.contains('high') || v.contains('warning')) {
+    return Colors.deepOrange;
+  }
+  if (v.contains('moderate') || v.contains('medium')) return Colors.amber[800]!;
+  if (v.contains('low') || v.contains('minor') || v.contains('info')) return Colors.green[700]!;
+  return Colors.grey[700]!;
 }
