@@ -1,65 +1,90 @@
-# Repository Guidelines
+# NordAlert — Agent Guide (Node + Flutter)
 
-## Project Structure & Module Organization
-- `backend/`: Node.js + TypeScript backend.
-  - `src/index.ts`: Fastify HTTP entrypoint (`/alerts`).
-  - `src/adapters/`: External data sources (Polisen, SMHI, Krisinformation, SCB, ArcGIS).
-  - `src/services/`: Orchestration (aggregation, notifications).
-  - `src/models/`: Domain types (e.g., `alert.ts`).
-  - `Dockerfile`, `package.json`, `tsconfig.json`, build output in `dist/`.
-- `terraform/`: IaC for deployment (Oracle Cloud). Key files: `main.tf`, `variables.tf`, `outputs.tf`.
-- `.github/workflows/`: CI/CD for build, deploy, Terraform, and security scans.
-- `sonar-project.properties`: SonarCloud configuration (scans `backend/`).
+This document adapts the sample agent guidelines for a Node.js + TypeScript backend and a Flutter mobile app, plus Terraform IaC. Follow it when contributing or using an AI agent on this repo.
 
-## Build, Test, and Development Commands
-- Install: `cd backend && npm ci`
+## Project Structure
+- `backend/`: Node.js + TypeScript backend
+  - `src/index.ts`: Fastify HTTP entrypoint (`/alerts`)
+  - `src/adapters/`: External data sources (Polisen, SMHI, Krisinformation, SCB, ArcGIS)
+  - `src/services/`: Orchestration (aggregation, notifications)
+  - `src/models/`: Domain types (e.g., `alert.ts`)
+  - Build artifacts in `dist/`
+- `mobile/`: Flutter app (Dart, BLoC)
+- `terraform/`: Oracle Cloud IaC (`main.tf`, `variables.tf`, `outputs.tf`)
+- `.github/workflows/`: CI/CD (build, deploy, Terraform, security scans)
+- `sonar-project.properties`: SonarCloud configuration (scans `backend/`)
+
+## Golden Rules
+- Make minimal, task-scoped changes; avoid unrelated edits.
+- Read existing docs first (`README.md`, this file, workflow YAMLs).
+- Explore the repo before coding (`ls`, open files, skim structure).
+- Do not commit from the agent; use read-only git commands for context.
+- Validate locally before ending a task. See Validation Checklists.
+
+## Architecture & State
+- Backend: Keep I/O in `src/adapters/`, pure domain in `src/models/`, coordination in `src/services/`, and HTTP wiring in `src/index.ts`.
+- Mobile: Use Flutter BLoC for state; prefer deriving UI state from events/data rather than ad-hoc booleans. Persist only what’s necessary (e.g., base URL) via `shared_preferences`.
+- Single source of truth: Avoid duplicating state across layers.
+
+## Coding Style
+- TypeScript: strict mode, 2 spaces, single quotes, semicolons.
+- Dart/Flutter: follow `flutter_lints`; keep widgets small and composable.
+- Naming: PascalCase for types/classes; camelCase for vars/functions; filenames lowercase (e.g., `polisen.ts`).
+- Errors: Backend code should bubble meaningful errors; avoid blanket try/catch. Flutter dev code can assert, but production UI should handle failures gracefully.
+
+## Backend — Dev & Build
+- Install deps: `cd backend && npm ci`
 - Run dev: `npm run start` (Fastify on `http://localhost:3000`)
 - Build: `npm run build` (emits `dist/`)
 - Docker: `docker build -t nord-alert-backend backend && docker run -p 3000:3000 nord-alert-backend`
-- Terraform: `cd terraform && terraform init && terraform plan && terraform apply`
- - Validate (always on PRs/changes):
-   - Terraform fmt/validate: `terraform fmt -check -recursive && terraform validate`
-   - TFLint: `tflint --init && tflint -f compact --recursive`
-   - TFSec: `tfsec .`
 
-## Coding Style & Naming Conventions
-- TypeScript `strict` mode; prefer 2-space indentation, single quotes, and semicolons.
-- Naming: PascalCase for types/classes; camelCase for variables/functions; filenames lowercase (e.g., `polisen.ts`).
-- Organization: keep external I/O in `src/adapters/`, pure domain in `src/models/`, coordination in `src/services/`, and HTTP wiring in `src/index.ts`.
+## Mobile — Dev & Checks
+- Setup: `cd mobile && flutter pub get`
+- Format: `dart format .` then `dart format --output=none --set-exit-if-changed .`
+- Analyze: `flutter analyze --fatal-infos --fatal-warnings`
+- Test: `flutter test`
+- Run: `flutter run --dart-define=BACKEND_BASE_URL=http://<host>:3000`
 
-## Testing Guidelines
-- No test runner is configured yet. Prefer adding Vitest or Jest (`*.spec.ts`).
-- Focus on deterministic tests for adapters (parsing/mapping) and services (aggregation/filters).
-- Once added: `npm test` from `backend/`. Keep unit tests fast; consider contract tests for external APIs.
+## Terraform — IaC
+- Validate: `terraform fmt -check -recursive`
+- Init/validate (no backend): `terraform init -backend=false -input=false && terraform validate`
+- Lint: `tflint --init && tflint -f compact --recursive`
+- Security: `tfsec .`
+- Plan/apply: `terraform plan && terraform apply` (use a remote backend for idempotent CI applies)
 
-## Validation Workflow (Before Submitting Changes)
-- Run TypeScript build: `npm run build` inside `backend/`.
-- Run infrastructure checks in `terraform/`:
-  - `terraform fmt -check -recursive`
-  - `terraform init -backend=false -input=false && terraform validate`
-  - `tflint --init && tflint -f compact --recursive`
-  - `tfsec .` (security scanning)
-- If modifying Dockerfile, build locally: `docker build backend` and confirm server responds: `docker run -p 3000:3000 <image>` then `curl http://localhost:3000/alerts`.
- - Mobile checks in `mobile/`:
-   - `flutter pub get`
-   - `dart format .` (auto-format) then `dart format --output=none --set-exit-if-changed .`
-   - `flutter analyze --fatal-infos --fatal-warnings`
-   - `flutter test`
+## Mandatory Validation (Before Finishing a Task)
+Perform the checks relevant to the files you changed:
 
-## Branching & PR Policy
-- Do not commit directly to `main`. Create feature branches (e.g., `feat/...`, `fix/...`, `chore/...`).
-- Open a PR to `main` with a clear description, verification steps, and linked issues.
-- Wait for CI (build, tfsec, tflint, Terraform validate) to pass before merging.
+Backend (TypeScript)
+- `cd backend && npm run build`
+- If Dockerfile changed: `docker build backend` and verify `/alerts` responds: `docker run -p 3000:3000 <image>` then `curl http://localhost:3000/alerts`
 
-## Terraform State & Idempotency
-- CI deployments rely on Terraform state to avoid re-creating resources. Configure a remote backend (e.g., Terraform Cloud) so subsequent `apply` runs update existing resources.
-- Without a remote backend, each clean CI run may treat the infra as new. Use a backend to ensure stable, incremental applies.
+Mobile (Flutter)
+- `cd mobile && flutter pub get`
+- `dart format --output=none --set-exit-if-changed .`
+- `flutter analyze --fatal-infos --fatal-warnings`
+- `flutter test`
 
-## Commit & Pull Request Guidelines
-- Commits: use Conventional Commits when possible (`feat:`, `fix:`, `chore:`) and reference issues (e.g., `#23`). Keep messages imperative and concise (≤72 chars subject).
-- PRs: include a clear summary, scope of changes, verification steps (e.g., `curl "http://localhost:3000/alerts?county=Stockholm&severity=medium"`), and deployment impact. Add screenshots/logs when helpful.
+Terraform
+- `cd terraform && terraform fmt -check -recursive`
+- `terraform init -backend=false -input=false && terraform validate`
+- `tflint --init && tflint -f compact --recursive`
+- `tfsec .`
 
-## Security & Configuration Tips
-- Never commit secrets. Use GitHub Secrets for CI/CD. Required secrets for deploy are listed in `README.md` (Docker Hub, OCI credentials).
-- Local config: `PORT` (defaults to 3000). Provide Firebase/API credentials via environment and cloud secret managers.
-- Infrastructure: run `terraform plan` before `apply`; keep changes minimal and reviewed. Consider running `tfsec` locally for policy checks.
+## Branching & PRs
+- Branch from `main` (do not commit directly to `main`).
+- Use Conventional Commit prefixes where possible (`feat:`, `fix:`, `chore:`) and reference issues (e.g., `#23`).
+- Open a PR with: summary, scope, verification steps, expected deployment impact, and screenshots/logs when helpful.
+- Merge only after CI passes (backend build, Terraform checks, tfsec, tflint, Flutter analyze/test).
+
+## Secrets & Configuration
+- Never commit secrets. Use GitHub Secrets for CI/CD (see README for required secrets: Docker Hub, OCI credentials).
+- Backend: `PORT` defaults to 3000; external API keys via env/secret managers.
+- Mobile: Provide `BACKEND_BASE_URL` via `Settings` dialog or `--dart-define`.
+- Terraform: Prefer a remote backend (e.g., Terraform Cloud) to keep state stable and idempotent between runs.
+
+## Reviewer/Agent Checklist
+- Changes are minimal and focused; no stray file churn.
+- Code aligns with module boundaries and naming conventions.
+- All relevant validation steps above are green.
+- Docs updated if behavior or interfaces changed.
