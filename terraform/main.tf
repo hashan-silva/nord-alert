@@ -13,7 +13,10 @@ terraform {
       version = "~> 3.0"
     }
   }
-  backend "remote" {}
+  backend "remote" {
+    hostname     = "app.terraform.io"
+    organization = "hashan-silva"
+  }
 }
 
 provider "oci" {
