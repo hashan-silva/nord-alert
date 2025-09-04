@@ -59,7 +59,7 @@ resource "oci_core_virtual_network" "vcn" {
 }
 
 locals {
-  ws     = regexreplace(terraform.workspace, "[^a-zA-Z0-9_-]", "-")
+  ws     = var.workspace_name
   vcn_id = oci_core_virtual_network.vcn.id
 }
 

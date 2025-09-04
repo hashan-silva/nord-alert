@@ -43,6 +43,11 @@ variable "container_port" {
 }
 
 # Networking
+variable "workspace_name" {
+  type        = string
+  default     = "main"
+  description = "Logical workspace/environment name used for resource names (set from CI)"
+}
 variable "vcn_cidr" {
   type    = string
   default = "10.20.0.0/16"

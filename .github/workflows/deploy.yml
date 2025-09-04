@@ -103,6 +103,7 @@ jobs:
           TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
           TF_VAR_image: ${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+          TF_VAR_workspace_name: ${{ steps.ws.outputs.name }}
         run: terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
@@ -116,6 +117,7 @@ jobs:
           TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
           TF_VAR_image: ${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+          TF_VAR_workspace_name: ${{ steps.ws.outputs.name }}
         run: terraform apply -input=false -auto-approve tfplan
 
       - name: Show Terraform outputs
