@@ -82,13 +82,13 @@ jobs:
 
       - name: Terraform Init (Terraform Cloud Remote Backend)
         working-directory: terraform
+        run: terraform init -input=false -reconfigure
+
+      - name: Ensure Terraform workspace exists
+        working-directory: terraform
         env:
-          TFC_ORG: ${{ secrets.TFC_ORG }}
-        run: |
-          terraform init \
-            -input=false -reconfigure \
-            -backend-config="hostname=app.terraform.io" \
-            -backend-config="organization=${TFC_ORG}"
+          TF_WORKSPACE: ${{ steps.ws.outputs.name }}
+        run: terraform workspace select "$TF_WORKSPACE" || terraform workspace new "$TF_WORKSPACE"
 
       - name: Terraform Plan
         id: plan
