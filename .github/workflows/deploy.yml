@@ -19,6 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Compute Terraform workspace from branch
+        id: ws
+        shell: bash
+        run: |
+          # Sanitize branch name for Terraform Cloud workspace (allow letters, numbers, -, _)
+          SAFE=$(echo "${GITHUB_REF_NAME}" | sed -E 's/[^A-Za-z0-9_-]+/-/g')
+          echo "name=${SAFE}" >> "$GITHUB_OUTPUT"
+
       - name: Detect backend changes
         id: backend_changed
         shell: bash
@@ -69,10 +77,19 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
+          # Configure CLI credentials for Terraform Cloud
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-      - name: Terraform Init
+      - name: Terraform Init (Terraform Cloud Remote Backend)
         working-directory: terraform
-        run: terraform init -input=false
+        env:
+          TFC_ORG: ${{ secrets.TFC_ORG }}
+        run: |
+          terraform init \
+            -input=false -reconfigure \
+            -backend-config="hostname=app.terraform.io" \
+            -backend-config="organization=${TFC_ORG}" \
+            -backend-config="workspaces.name=${{ steps.ws.outputs.name }}"
 
       - name: Terraform Plan
         id: plan
@@ -86,7 +103,7 @@ jobs:
           TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
           TF_VAR_image: ${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform plan -out=tfplan
+        run: terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
         working-directory: terraform

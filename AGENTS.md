@@ -20,6 +20,7 @@ This document adapts the sample agent guidelines for a Node.js + TypeScript back
 - Explore the repo before coding (`ls`, open files, skim structure).
 - Do not commit from the agent; use read-only git commands for context.
 - Validate locally before ending a task. See Validation Checklists.
+- Always propose a plan with a short TODO list and wait for explicit user approval before executing.
 
 ## Architecture & State
 - Backend: Keep I/O in `src/adapters/`, pure domain in `src/models/`, coordination in `src/services/`, and HTTP wiring in `src/index.ts`.
@@ -88,3 +89,9 @@ Terraform
 - Code aligns with module boundaries and naming conventions.
 - All relevant validation steps above are green.
 - Docs updated if behavior or interfaces changed.
+-
+## Planning & Approvals
+- Before making any changes, present a concise plan and a short TODO list that outlines the intended steps.
+- Do not execute the plan until the user explicitly approves it. If unclear, ask for confirmation.
+- After approval, follow the agreed plan; if scope changes, submit an updated plan for re-approval.
+- Keep TODO items small (5–7 words each) and logically ordered; mark progress as steps complete.

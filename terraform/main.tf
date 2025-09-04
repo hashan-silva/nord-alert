@@ -13,6 +13,7 @@ terraform {
       version = "~> 3.0"
     }
   }
+  backend "remote" {}
 }
 
 provider "oci" {
@@ -40,7 +41,7 @@ data "oci_core_images" "ubuntu" {
 }
 
 ############################################
-# Dedicated VCN per deployment (avoids overlap)
+# VCN (per workspace via remote state)
 ############################################
 resource "random_string" "vcn_suffix" {
   length  = 4
@@ -53,11 +54,12 @@ resource "random_string" "vcn_suffix" {
 resource "oci_core_virtual_network" "vcn" {
   compartment_id = var.compartment_ocid
   cidr_block     = var.vcn_cidr
-  display_name   = "nord-alert-vcn"
+  display_name   = "nord-alert-vcn-${local.ws}"
   dns_label      = "nord${random_string.vcn_suffix.result}"
 }
 
 locals {
+  ws     = regexreplace(terraform.workspace, "[^a-zA-Z0-9_-]", "-")
   vcn_id = oci_core_virtual_network.vcn.id
 }
 
@@ -67,7 +69,7 @@ locals {
 resource "oci_core_internet_gateway" "igw" {
   compartment_id = var.compartment_ocid
   vcn_id         = local.vcn_id
-  display_name   = "nord-alert-igw"
+  display_name   = "nord-alert-igw-${local.ws}"
   enabled        = true
 }
 
@@ -77,7 +79,7 @@ resource "oci_core_internet_gateway" "igw" {
 resource "oci_core_route_table" "rt" {
   compartment_id = var.compartment_ocid
   vcn_id         = local.vcn_id
-  display_name   = "nord-alert-rt"
+  display_name   = "nord-alert-rt-${local.ws}"
 
   route_rules {
     destination       = "0.0.0.0/0"
@@ -92,7 +94,7 @@ resource "oci_core_route_table" "rt" {
 resource "oci_core_subnet" "public" {
   compartment_id             = var.compartment_ocid
   vcn_id                     = local.vcn_id
-  display_name               = "nord-alert-public-subnet"
+  display_name               = "nord-alert-public-subnet-${local.ws}"
   cidr_block                 = var.public_subnet_cidr
   route_table_id             = oci_core_route_table.rt.id
   prohibit_public_ip_on_vnic = false
@@ -105,7 +107,7 @@ resource "oci_core_subnet" "public" {
 resource "oci_core_network_security_group" "web" {
   compartment_id = var.compartment_ocid
   vcn_id         = local.vcn_id
-  display_name   = "nord-alert-web-nsg"
+  display_name   = "nord-alert-web-nsg-${local.ws}"
 }
 
 resource "oci_core_network_security_group_security_rule" "ingress_ssh" {
@@ -176,7 +178,7 @@ locals {
 resource "oci_core_instance" "vm" {
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   compartment_id      = var.compartment_ocid
-  display_name        = var.instance_display
+  display_name        = "${var.instance_display}-${local.ws}"
   shape               = var.compute_shape
 
   source_details {
