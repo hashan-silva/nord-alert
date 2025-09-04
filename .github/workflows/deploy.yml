@@ -82,13 +82,9 @@ jobs:
 
       - name: Terraform Init (Terraform Cloud Remote Backend)
         working-directory: terraform
-        run: terraform init -input=false -reconfigure
-
-      - name: Ensure Terraform workspace exists
-        working-directory: terraform
         env:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-        run: terraform workspace select "$TF_WORKSPACE" || terraform workspace new "$TF_WORKSPACE"
+        run: terraform init -input=false -reconfigure
 
       - name: Terraform Plan
         id: plan
@@ -120,13 +116,3 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
           TF_VAR_workspace_name: ${{ steps.ws.outputs.name }}
         run: terraform apply -input=false -auto-approve tfplan
-
-      - name: Show Terraform outputs
-        working-directory: terraform
-        shell: bash
-        run: |
-          echo "## Deployment Outputs" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Web URL: $(terraform output -raw web_url)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Public IP: $(terraform output -raw public_ip)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- SSH: $(terraform output -raw ssh_example)" >> "$GITHUB_STEP_SUMMARY"
