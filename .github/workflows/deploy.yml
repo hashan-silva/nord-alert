@@ -84,12 +84,6 @@ jobs:
         working-directory: terraform
         run: terraform init -input=false -reconfigure
 
-      - name: Ensure Terraform workspace exists
-        working-directory: terraform
-        env:
-          TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-        run: terraform workspace select "$TF_WORKSPACE" || terraform workspace new "$TF_WORKSPACE"
-
       - name: Terraform Plan
         id: plan
         working-directory: terraform
