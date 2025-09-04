@@ -88,8 +88,7 @@ jobs:
           terraform init \
             -input=false -reconfigure \
             -backend-config="hostname=app.terraform.io" \
-            -backend-config="organization=${TFC_ORG}" \
-            -backend-config="workspaces.prefix=nord-alert"
+            -backend-config="organization=${TFC_ORG}"
 
       - name: Terraform Plan
         id: plan
