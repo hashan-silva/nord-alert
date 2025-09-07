@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/nord-alert-backend
+      TFC_ORG: hashan-silva
+      TFC_HOST: app.terraform.io
+      TFC_WS_PREFIX: nord-alert-
     steps:
       - uses: actions/checkout@v4
 
@@ -26,6 +29,48 @@ jobs:
           # Sanitize branch name for Terraform Cloud workspace (allow letters, numbers, -, _)
           SAFE=$(echo "${GITHUB_REF_NAME}" | sed -E 's/[^A-Za-z0-9_-]+/-/g')
           echo "name=${SAFE}" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Terraform Cloud workspace exists
+        shell: bash
+        env:
+          TFC_TOKEN: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          LOCAL_WS="${{ steps.ws.outputs.name }}"
+          REMOTE_WS="${TFC_WS_PREFIX}${LOCAL_WS}"
+          ORG="${TFC_ORG}"
+          HOST="${TFC_HOST}"
+          echo "Ensuring TFC workspace: ${ORG}/${REMOTE_WS}"
+          # Check if workspace exists
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${TFC_TOKEN}" \
+            -H "Content-Type: application/vnd.api+json" \
+            https://${HOST}/api/v2/organizations/${ORG}/workspaces/${REMOTE_WS}) || STATUS=000
+          if [ "$STATUS" = "200" ]; then
+            echo "Workspace exists."
+            exit 0
+          fi
+          if [ "$STATUS" != "404" ]; then
+            echo "Unexpected status checking workspace: $STATUS" >&2
+            exit 1
+          fi
+          echo "Creating workspace ${REMOTE_WS}..."
+          RESP=$(curl -s -o /dev/stderr -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${TFC_TOKEN}" \
+            -H "Content-Type: application/vnd.api+json" \
+            https://${HOST}/api/v2/organizations/${ORG}/workspaces \
+            -d @- <<JSON
+          {
+            "data": {
+              "type": "workspaces",
+              "attributes": {
+                "name": "${REMOTE_WS}"
+              }
+            }
+          }
+JSON
+          )
+          [ "$RESP" = "201" ] || { echo "Failed to create workspace (status $RESP)" >&2; exit 1; }
 
       - name: Detect backend changes
         id: backend_changed
@@ -90,7 +135,8 @@ jobs:
         working-directory: terraform
         env:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-        run: terraform init -input=false -reconfigure
+        run: |
+          terraform workspace select "${TF_WORKSPACE}" || terraform workspace new "${TF_WORKSPACE}"
 
       - name: Terraform Plan
         id: plan
