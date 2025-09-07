@@ -59,17 +59,7 @@ jobs:
             -H "Authorization: Bearer ${TFC_TOKEN}" \
             -H "Content-Type: application/vnd.api+json" \
             https://${HOST}/api/v2/organizations/${ORG}/workspaces \
-            -d @- <<JSON
-          {
-            "data": {
-              "type": "workspaces",
-              "attributes": {
-                "name": "${REMOTE_WS}"
-              }
-            }
-          }
-JSON
-          )
+            -d "{\"data\":{\"type\":\"workspaces\",\"attributes\":{\"name\":\"${REMOTE_WS}\"}}}")
           [ "$RESP" = "201" ] || { echo "Failed to create workspace (status $RESP)" >&2; exit 1; }
 
       - name: Detect backend changes
