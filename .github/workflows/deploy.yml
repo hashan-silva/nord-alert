@@ -30,38 +30,6 @@ jobs:
           SAFE=$(echo "${GITHUB_REF_NAME}" | sed -E 's/[^A-Za-z0-9_-]+/-/g')
           echo "name=${SAFE}" >> "$GITHUB_OUTPUT"
 
-      - name: Ensure Terraform Cloud workspace exists
-        shell: bash
-        env:
-          TFC_TOKEN: ${{ secrets.TF_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          LOCAL_WS="${{ steps.ws.outputs.name }}"
-          REMOTE_WS="${TFC_WS_PREFIX}${LOCAL_WS}"
-          ORG="${TFC_ORG}"
-          HOST="${TFC_HOST}"
-          echo "Ensuring TFC workspace: ${ORG}/${REMOTE_WS}"
-          # Check if workspace exists
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: Bearer ${TFC_TOKEN}" \
-            -H "Content-Type: application/vnd.api+json" \
-            https://${HOST}/api/v2/organizations/${ORG}/workspaces/${REMOTE_WS}) || STATUS=000
-          if [ "$STATUS" = "200" ]; then
-            echo "Workspace exists."
-            exit 0
-          fi
-          if [ "$STATUS" != "404" ]; then
-            echo "Unexpected status checking workspace: $STATUS" >&2
-            exit 1
-          fi
-          echo "Creating workspace ${REMOTE_WS}..."
-          RESP=$(curl -s -o /dev/stderr -w "%{http_code}" -X POST \
-            -H "Authorization: Bearer ${TFC_TOKEN}" \
-            -H "Content-Type: application/vnd.api+json" \
-            https://${HOST}/api/v2/organizations/${ORG}/workspaces \
-            -d "{\"data\":{\"type\":\"workspaces\",\"attributes\":{\"name\":\"${REMOTE_WS}\"}}}")
-          [ "$RESP" = "201" ] || { echo "Failed to create workspace (status $RESP)" >&2; exit 1; }
-
       - name: Detect backend changes
         id: backend_changed
         shell: bash
@@ -122,22 +90,6 @@ jobs:
         run: terraform init -input=false -reconfigure
 
       # With remote backend + TF_WORKSPACE set, selection is implicit; no CLI workspace ops needed
-
-      - name: Terraform Plan
-        id: plan
-        working-directory: terraform
-        env:
-          TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-          TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
-          TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
-          TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
-          TF_VAR_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
-          TF_VAR_region: ${{ secrets.OCI_REGION }}
-          TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
-          TF_VAR_image: ${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-          TF_VAR_workspace_name: ${{ steps.ws.outputs.name }}
-        run: terraform plan -input=false
 
       - name: Terraform Apply
         working-directory: terraform
