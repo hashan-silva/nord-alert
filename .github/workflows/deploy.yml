@@ -89,6 +89,27 @@ jobs:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
         run: terraform init -input=false -reconfigure
 
+      - name: Debug TF_VAR values
+        shell: bash
+        env:
+          TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+          TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
+          TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+          TF_VAR_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_region: ${{ secrets.OCI_REGION }}
+          TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
+          TF_VAR_image: ${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: |
+          echo "tenancy_ocid: $TF_VAR_tenancy_ocid"
+          echo "user_ocid: $TF_VAR_user_ocid"
+          echo "fingerprint: $TF_VAR_fingerprint"
+          echo "region: $TF_VAR_region"
+          echo "compartment_ocid: $TF_VAR_compartment_ocid"
+          echo "image: $TF_VAR_image"
+          echo "ssh_public_key: $TF_VAR_ssh_public_key"
+
+
       # With remote backend + TF_WORKSPACE set, selection is implicit; no CLI workspace ops needed
 
       - name: Terraform Apply
