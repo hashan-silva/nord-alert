@@ -89,8 +89,6 @@ jobs:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
         run: terraform init -input=false -reconfigure
 
-        # With remote backend + TF_WORKSPACE set, selection is implicit; no CLI workspace ops needed
-
       - name: Terraform Apply
         working-directory: terraform
         env:
