@@ -111,15 +111,5 @@ jobs:
         working-directory: terraform
         env:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-        run: |
-          terraform apply -auto-approve \
-            -var="tenancy_ocid=${{ secrets.OCI_TENANCY_OCID }}" \
-            -var="user_ocid=${{ secrets.OCI_USER_OCID }}" \
-            -var="fingerprint=${{ secrets.OCI_FINGERPRINT }}" \
-            -var="private_key=${{ secrets.OCI_PRIVATE_KEY }}" \
-            -var="region=${{ secrets.OCI_REGION }}" \
-            -var="compartment_ocid=${{ secrets.OCI_COMPARTMENT_OCID }}" \
-            -var="image=${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}" \
-            -var="ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}" \
-            -var="workspace_name=${{ steps.ws.outputs.name }}"
+        run: terraform apply -auto-approve
 
