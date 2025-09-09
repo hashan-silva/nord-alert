@@ -129,6 +129,8 @@ package-lock.json
 # Terraform
 .terraform/
 *.tfplan
+*.tfvars
+*.auto.tfvars
 *.tfstate
 *.tfstate.backup
 crash.log
