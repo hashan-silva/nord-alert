@@ -38,8 +38,8 @@ class Alert {
 
   factory Alert.fromJson(Map<String, dynamic> json) {
     return Alert(
-      id: json['id'] as String,
-      source: alertSourceFromString(json['source'] as String),
+      id: (json['id'] ?? '') as String,
+      source: alertSourceFromString((json['source'] as String?) ?? 'polisen'),
       headline: (json['headline'] ?? '') as String,
       description: json['description'] as String?,
       areas: (json['areas'] as List<dynamic>? ?? const []).map((e) => e.toString()).toList(),
