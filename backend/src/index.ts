@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import { z } from 'zod';
 import { fetchAllAlerts } from './services/aggregator';
-import { Severity } from './models/alert';
+import { Severity, Alert } from './models/alert';
 
 const app = Fastify();
 
@@ -11,6 +11,12 @@ const querySchema = z.object({
 });
 
 const severityOrder: Severity[] = ['info', 'low', 'medium', 'high'];
+
+function pruneNulls(alert: Alert): Alert {
+  return Object.fromEntries(
+    Object.entries(alert).filter(([, v]) => v !== null && v !== undefined)
+  ) as Alert;
+}
 
 app.get('/health', async () => {
   return { status: 'ok' };
@@ -29,7 +35,7 @@ app.get('/alerts', async (request, reply) => {
       (a) => severityOrder.indexOf(a.severity) >= threshold
     );
   }
-  return filtered;
+  return filtered.map(pruneNulls);
 });
 
 export async function start() {
