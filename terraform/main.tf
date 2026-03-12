@@ -27,17 +27,12 @@ locals {
   name_prefix = "${var.project_name}-${local.workspace}"
 }
 
-resource "aws_ecr_repository" "lambda" {
-  name                 = var.ecr_repository_name
-  image_tag_mutability = "IMMUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+data "aws_ecr_repository" "lambda" {
+  name = var.ecr_repository_name
 }
 
 resource "aws_ecr_lifecycle_policy" "lambda" {
-  repository = aws_ecr_repository.lambda.name
+  repository = data.aws_ecr_repository.lambda.name
 
   policy = jsonencode({
     rules = [

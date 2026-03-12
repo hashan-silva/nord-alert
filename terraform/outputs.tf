@@ -10,5 +10,5 @@ output "lambda_function_name" {
 
 output "ecr_repository_url" {
   description = "ECR repository URL for Lambda image deployments"
-  value       = aws_ecr_repository.lambda.repository_url
+  value       = data.aws_ecr_repository.lambda.repository_url
 }
