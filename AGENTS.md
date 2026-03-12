@@ -4,11 +4,11 @@ This document adapts the sample agent guidelines for a Java backend, a Flutter m
 
 ## Project Structure
 - `backend/`: Java 17 backend
-  - `src/main/java/se/nordalert/backend/NordAlertApplication.java`: Spring Boot entrypoint
-  - `src/main/java/se/nordalert/backend/adapters/`: External data sources (Polisen, SMHI, Krisinformation)
-  - `src/main/java/se/nordalert/backend/services/`: Orchestration and aggregation
-  - `src/main/java/se/nordalert/backend/models/`: Domain types
-  - `src/main/java/se/nordalert/backend/controllers/`: HTTP endpoints
+  - `src/main/java/com/hashan0314/nordalert/backend/NordAlertApplication.java`: Spring Boot entrypoint
+  - `src/main/java/com/hashan0314/nordalert/backend/adapters/`: External data sources (Polisen, SMHI, Krisinformation)
+  - `src/main/java/com/hashan0314/nordalert/backend/services/`: Orchestration and aggregation
+  - `src/main/java/com/hashan0314/nordalert/backend/models/`: Domain types
+  - `src/main/java/com/hashan0314/nordalert/backend/controllers/`: HTTP endpoints
   - Build artifacts in `target/`
 - `mobile/`: Flutter app (Dart, BLoC)
 - `terraform/`: AWS serverless IaC (`main.tf`, `variables.tf`, `outputs.tf`)
@@ -37,7 +37,7 @@ This document adapts the sample agent guidelines for a Java backend, a Flutter m
 - Single source of truth: Avoid duplicating state across layers.
 
 ## Coding Style
-- Java: target Amazon Corretto 17, use Spring Boot conventions, 2 spaces, and keep packages under `se.nordalert.backend`.
+- Java: target Amazon Corretto 17, use Spring Boot conventions, 2 spaces, and keep packages under `com.hashan0314.nordalert.backend`.
 - Dart/Flutter: follow `flutter_lints`; keep widgets small and composable.
 - Naming: PascalCase for Java types/classes; camelCase for vars/functions; lowercase package names.
 - Errors: Backend code should bubble meaningful errors; avoid blanket try/catch. Flutter dev code can assert, but production UI should handle failures gracefully.

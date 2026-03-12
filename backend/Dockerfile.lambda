@@ -15,4 +15,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl --fail --silent -XPOST http://127.0.0.1:8080/2015-03-31/functions/function/invocations \
     -d '{"version":"2.0","routeKey":"$default","rawPath":"/health","rawQueryString":"","headers":{},"requestContext":{"http":{"method":"GET","path":"/health","sourceIp":"127.0.0.1","userAgent":"healthcheck"}},"isBase64Encoded":false}' \
     >/dev/null || exit 1
-CMD ["se.nordalert.backend.StreamLambdaHandler::handleRequest"]
+CMD ["com.hashan0314.nordalert.backend.StreamLambdaHandler::handleRequest"]
