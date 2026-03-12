@@ -5,7 +5,7 @@ permissions:
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'v*' ]
 
 concurrency:
   group: deploy-main
@@ -41,11 +41,28 @@ jobs:
           BASE: ${{ github.event.before }}
           HEAD: ${{ github.sha }}
 
-      - name: Compute image tag
+      - name: Compute image tags
         id: img
         shell: bash
         run: |
-          echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+            {
+              echo "dockerhub_tags<<EOF"
+              echo "${IMAGE_REPO}:latest"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          elif [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            {
+              echo "dockerhub_tags<<EOF"
+              echo "${IMAGE_REPO}:${GITHUB_REF_NAME}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "Unsupported branch for image tagging: ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -128,9 +145,7 @@ jobs:
           platforms: linux/amd64
           push: true
           provenance: false
-          tags: |
-            ${{ env.IMAGE_REPO }}:latest
-            ${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}
+          tags: ${{ steps.img.outputs.dockerhub_tags }}
           cache-to: type=gha,mode=max
 
       - name: Build and push Lambda image
