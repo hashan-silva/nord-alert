@@ -11,7 +11,7 @@ This document adapts the sample agent guidelines for a Java backend, a Flutter m
   - `src/main/java/se/nordalert/backend/controllers/`: HTTP endpoints
   - Build artifacts in `target/`
 - `mobile/`: Flutter app (Dart, BLoC)
-- `terraform/`: Oracle Cloud IaC (`main.tf`, `variables.tf`, `outputs.tf`)
+- `terraform/`: AWS serverless IaC (`main.tf`, `variables.tf`, `outputs.tf`)
 - `.github/workflows/`: CI/CD (build, deploy, Terraform, security scans)
 - `sonar-project.properties`: SonarCloud configuration (scans `backend/`)
 
@@ -43,16 +43,17 @@ This document adapts the sample agent guidelines for a Java backend, a Flutter m
 - Errors: Backend code should bubble meaningful errors; avoid blanket try/catch. Flutter dev code can assert, but production UI should handle failures gracefully.
 
 ## Backend — Dev & Build
-- Run dev: `cd backend && mvn spring-boot:run` (Spring Boot on `http://localhost:3000`)
+- Run dev: `cd backend && mvn spring-boot:run` (Spring Boot on `http://localhost:8080`)
 - Build: `cd backend && mvn package` (emits `target/`)
-- Docker: `docker build -t nord-alert-backend backend && docker run -p 3000:3000 nord-alert-backend`
+- Docker: `docker build -t nord-alert-backend backend && docker run -p 8080:8080 nord-alert-backend`
+- Lambda image: `docker build -f Dockerfile.lambda -t nord-alert-backend-lambda backend && docker run -p 9000:8080 nord-alert-backend-lambda`
 
 ## Mobile — Dev & Checks
 - Setup: `cd mobile && flutter pub get`
 - Format: `dart format .` then `dart format --output=none --set-exit-if-changed .`
 - Analyze: `flutter analyze --fatal-infos --fatal-warnings`
 - Test: `flutter test`
-- Run: `flutter run --dart-define=BACKEND_BASE_URL=http://<host>:3000`
+- Run: `flutter run --dart-define=BACKEND_BASE_URL=http://<host>:8080`
 
 ## Terraform — IaC
 - Validate: `terraform fmt -check -recursive`
@@ -67,7 +68,8 @@ Perform the checks relevant to the files you changed:
 Backend (Java)
 - `cd backend && mvn package`
 - Run Sonar analysis for backend code changes via the configured `sonarqube` MCP server when the project is available there.
-- If Dockerfile changed: `docker build backend` and verify `/alerts` responds: `docker run -p 3000:3000 <image>` then `curl http://localhost:3000/alerts`
+- If `backend/Dockerfile` changed: `docker build backend` and verify `/alerts` responds from `docker run -p 8080:8080 <image>`.
+- If `backend/Dockerfile.lambda` changed: `docker build -f backend/Dockerfile.lambda backend` and verify the Lambda container starts locally with `docker run -p 9000:8080 <image>` and a Lambda invoke request.
 
 Mobile (Flutter)
 - `cd mobile && flutter pub get`
@@ -88,8 +90,8 @@ Terraform
 - Merge only after CI passes (backend container build, Terraform checks, tfsec, tflint, Flutter analyze/test).
 
 ## Secrets & Configuration
-- Never commit secrets. Use GitHub Secrets for CI/CD (see README for required secrets: Docker Hub, OCI credentials).
-- Backend: `PORT` defaults to 3000; external API keys via env/secret managers.
+- Never commit secrets. Use GitHub Secrets for CI/CD (see README for required secrets: Docker Hub, AWS credentials).
+- Backend: `PORT` defaults to 8080 for local Spring Boot execution; the Lambda container runtime also listens on port 8080 locally.
 - Mobile: Provide `BACKEND_BASE_URL` via `Settings` dialog or `--dart-define`.
 - Terraform: Prefer a remote backend (e.g., Terraform Cloud) to keep state stable and idempotent between runs.
 

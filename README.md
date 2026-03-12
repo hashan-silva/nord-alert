@@ -29,12 +29,13 @@ This project is built with a modern, production-ready tech stack:
   - **Push Notifications:** `firebase_core`, `firebase_messaging`, `flutter_local_notifications`
   - **Utilities:** `intl`, `url_launcher`
 
-- **Backend (Java on OCI):**
+- **Backend (Java on AWS Lambda):**
   - **Runtime:** Amazon Corretto 17
   - **Framework:** Spring Boot 3
   - **Build:** Maven
   - **HTTP Client:** Java `HttpClient`
   - **Serialization:** Jackson
+  - **Serverless Adapter:** `aws-serverless-java-container`
 
 - **Database:**
   - **Store:** Firestore for storing normalized alerts and managing deduplication.
@@ -60,19 +61,20 @@ mvn spring-boot:run
 ```
 
 The API exposes a `/alerts` endpoint which accepts optional `county` and `severity` query parameters for filtering.
+OpenAPI docs are available at `/v3/api-docs`, and Swagger UI is available at `/swagger-ui/index.html` during normal web execution.
 
 ### Mobile (Flutter)
 
 This repo includes a minimal Flutter client in `mobile/` to list alerts and filter by county and provider.
 
 - Run (emulator):
-  - Android: `cd mobile && flutter pub get && flutter run --dart-define=BACKEND_BASE_URL=http://10.0.2.2:3000`
-  - iOS/Web: `flutter run --dart-define=BACKEND_BASE_URL=http://localhost:3000`
+  - Android: `cd mobile && flutter pub get && flutter run --dart-define=BACKEND_BASE_URL=http://10.0.2.2:8080`
+  - iOS/Web: `flutter run --dart-define=BACKEND_BASE_URL=http://localhost:8080`
 - Run (physical Android/iOS device):
   - Ensure phone and backend host are on the same Wi‑Fi/LAN.
-  - Start backend listening on all interfaces (e.g., Docker run with `-p 3000:3000`). Allow firewall on port 3000.
+  - Start backend listening on all interfaces (for example `mvn spring-boot:run`). Allow firewall on port 8080.
   - Find your computer’s LAN IP (e.g., `ipconfig` on Windows; `ifconfig`/`ip addr` on macOS/Linux).
-  - Launch the app (`flutter run -d <device>`). Open Settings (top‑right gear), enter `http://<LAN-IP>:3000`, tap Test, then Save.
+  - Launch the app (`flutter run -d <device>`). Open Settings (top‑right gear), enter `http://<LAN-IP>:8080`, tap Test, then Save.
   - Android 9+ cleartext HTTP: if requests fail, set `android:usesCleartextTraffic="true"` in `android/app/src/main/AndroidManifest.xml` (dev only), or use HTTPS.
   - iOS ATS: if HTTP is blocked, add a temporary ATS exception for development or use HTTPS.
 - Filtering: provider chips (Polisen/SMHI/Krisinformation) are client‑side; county dropdown refetches using the backend `county` query.
@@ -90,10 +92,10 @@ The backend retrieves information from a number of official Swedish services:
 
 ### Deployment & CI
 
-GitHub Actions builds and pushes the backend Docker image (tagged with commit SHA) and deploys it to Oracle Cloud via Terraform on pushes to `main`.
+GitHub Actions builds the backend Docker image, pushes it to Docker Hub and Amazon ECR, and deploys the backend to AWS Lambda plus API Gateway via Terraform on pushes to `main`.
 
 - Workflows: Deploy (`deploy.yml`), Sonar (`build.yml`), Terraform lint/validate, tfsec (SARIF → Code Scanning), and Flutter CI for `mobile/`.
-- Terraform: provisions VCN, subnet, IGW/route, NSG, and a VM; cloud‑init installs Docker and runs the container mapping port 80 → 3000.
-- Docker: builds the Spring Boot jar with Maven on Amazon Corretto 17 and exposes `/health`.
-- Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_PRIVATE_KEY`, `OCI_REGION`, `OCI_COMPARTMENT_OCID`, `SSH_PUBLIC_KEY`.
+- Terraform: provisions an ECR repository, Lambda execution role, Lambda function, and API Gateway HTTP API.
+- Docker: builds a standard Java 17 web image for Docker Hub from `backend/Dockerfile` and a Lambda-compatible image for ECR from `backend/Dockerfile.lambda`.
+- Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `TF_API_TOKEN`.
 - Recommendation: use a remote Terraform backend to persist state across runs for reliable, incremental applies.

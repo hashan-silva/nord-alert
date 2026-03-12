@@ -1,0 +1,11 @@
+FROM maven:3.9.9-amazoncorretto-17 AS build
+WORKDIR /app
+COPY pom.xml ./
+COPY src ./src
+RUN mvn -q -DskipTests package
+
+FROM public.ecr.aws/lambda/java:17
+COPY --from=build /app/target/classes ${LAMBDA_TASK_ROOT}
+COPY --from=build /app/target/dependency/* ${LAMBDA_TASK_ROOT}/lib/
+EXPOSE 8080
+CMD ["se.nordalert.backend.StreamLambdaHandler::handleRequest"]

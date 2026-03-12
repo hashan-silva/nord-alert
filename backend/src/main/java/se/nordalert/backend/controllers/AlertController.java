@@ -1,5 +1,12 @@
 package se.nordalert.backend.controllers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +19,7 @@ import se.nordalert.backend.models.Severity;
 import se.nordalert.backend.services.AlertAggregationService;
 
 @RestController
+@Tag(name = "Alerts", description = "Alert feed and health endpoints")
 public class AlertController {
 
   private final AlertAggregationService alertAggregationService;
@@ -21,13 +29,37 @@ public class AlertController {
   }
 
   @GetMapping("/health")
+  @Operation(
+      summary = "Health check",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Backend is healthy",
+            content = @Content(schema = @Schema(implementation = HealthResponse.class))
+        )
+      }
+  )
   public HealthResponse health() {
     return new HealthResponse("ok");
   }
 
   @GetMapping("/alerts")
+  @Operation(
+      summary = "List alerts",
+      description = "Returns the aggregated alert feed with optional county and severity filters.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Aggregated alerts",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = Alert.class)))
+        ),
+        @ApiResponse(responseCode = "400", description = "Invalid severity filter")
+      }
+  )
   public List<Alert> alerts(
+      @Parameter(description = "Exact county name filter", example = "Stockholms län")
       @RequestParam(required = false) String county,
+      @Parameter(description = "Minimum severity threshold", example = "medium")
       @RequestParam(required = false) String severity
   ) {
     Severity threshold = parseSeverity(severity);
@@ -51,6 +83,9 @@ public class AlertController {
   }
 
   @ResponseStatus(HttpStatus.OK)
-  public record HealthResponse(String status) {
+  public record HealthResponse(
+      @Schema(example = "ok")
+      String status
+  ) {
   }
 }
