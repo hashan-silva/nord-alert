@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/nord-alert-backend
-      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_REGION: ${{ vars.AWS_REGION || secrets.AWS_REGION || 'eu-north-1' }}
       ECR_REPOSITORY: nord-alert-backend
     steps:
       - uses: actions/checkout@v4
