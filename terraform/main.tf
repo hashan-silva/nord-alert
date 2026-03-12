@@ -23,7 +23,7 @@ provider "aws" {
 }
 
 locals {
-  workspace = var.workspace_name
+  workspace   = var.workspace_name
   name_prefix = "${var.project_name}-${local.workspace}"
 }
 
@@ -151,16 +151,16 @@ resource "aws_apigatewayv2_stage" "default" {
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.apigateway.arn
     format = jsonencode({
-      requestId          = "$context.requestId"
-      ip                 = "$context.identity.sourceIp"
-      requestTime        = "$context.requestTime"
-      httpMethod         = "$context.httpMethod"
-      routeKey           = "$context.routeKey"
-      status             = "$context.status"
-      protocol           = "$context.protocol"
-      responseLength     = "$context.responseLength"
-      integrationError   = "$context.integrationErrorMessage"
-      integrationStatus  = "$context.integration.status"
+      requestId         = "$context.requestId"
+      ip                = "$context.identity.sourceIp"
+      requestTime       = "$context.requestTime"
+      httpMethod        = "$context.httpMethod"
+      routeKey          = "$context.routeKey"
+      status            = "$context.status"
+      protocol          = "$context.protocol"
+      responseLength    = "$context.responseLength"
+      integrationError  = "$context.integrationErrorMessage"
+      integrationStatus = "$context.integration.status"
     })
   }
 
