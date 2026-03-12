@@ -7,8 +7,8 @@ RUN mvn -q -DskipTests package
 FROM public.ecr.aws/lambda/java:17
 COPY --from=build /app/target/classes ${LAMBDA_TASK_ROOT}
 COPY --from=build /app/target/dependency/* ${LAMBDA_TASK_ROOT}/lib/
-RUN dnf install -y curl \
-  && dnf clean all
+RUN yum install -y curl \
+  && yum clean all
 USER 1000
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
