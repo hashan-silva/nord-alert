@@ -97,5 +97,6 @@ GitHub Actions builds the backend Docker image, pushes it to Docker Hub and Amaz
 - Workflows: Deploy (`deploy.yml`), Sonar (`build.yml`), Terraform lint/validate, tfsec (SARIF → Code Scanning), and Flutter CI for `mobile/`.
 - Terraform: provisions an ECR repository, Lambda execution role, Lambda function, and API Gateway HTTP API.
 - Docker: builds a standard Java 17 web image for Docker Hub from `backend/Dockerfile` and a Lambda-compatible image for ECR from `backend/Dockerfile.lambda`.
-- Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `TF_API_TOKEN`.
+- Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `TF_API_TOKEN`.
+- Default AWS region is Stockholm (`eu-north-1`). Set `AWS_REGION` in GitHub Secrets only if you want to override that default in CI.
 - Recommendation: use a remote Terraform backend to persist state across runs for reliable, incremental applies.

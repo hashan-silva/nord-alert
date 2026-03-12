@@ -90,7 +90,7 @@ Terraform
 - Merge only after CI passes (backend container build, Terraform checks, tfsec, tflint, Flutter analyze/test).
 
 ## Secrets & Configuration
-- Never commit secrets. Use GitHub Secrets for CI/CD (see README for required secrets: Docker Hub, AWS credentials).
+- Never commit secrets. Use GitHub Secrets for CI/CD (see README for required secrets: Docker Hub, AWS credentials). Default AWS region is Stockholm (`eu-north-1`) unless CI overrides it.
 - Backend: `PORT` defaults to 8080 for local Spring Boot execution; the Lambda container runtime also listens on port 8080 locally.
 - Mobile: Provide `BACKEND_BASE_URL` via `Settings` dialog or `--dart-define`.
 - Terraform: Prefer a remote backend (e.g., Terraform Cloud) to keep state stable and idempotent between runs.

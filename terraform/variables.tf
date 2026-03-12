@@ -1,6 +1,7 @@
 variable "aws_region" {
   type        = string
-  description = "AWS region for the Lambda deployment"
+  default     = "eu-north-1"
+  description = "AWS region for the Lambda deployment (defaults to Stockholm)"
 }
 
 variable "workspace_name" {
