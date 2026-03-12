@@ -1,14 +1,14 @@
-output "public_ip" {
-  description = "Public IP of the VM"
-  value       = oci_core_instance.vm.public_ip
+output "api_url" {
+  description = "Invoke URL for the deployed HTTP API"
+  value       = aws_apigatewayv2_stage.default.invoke_url
 }
 
-output "ssh_example" {
-  description = "SSH command"
-  value       = "ssh ubuntu@${oci_core_instance.vm.public_ip}"
+output "lambda_function_name" {
+  description = "Lambda function name"
+  value       = aws_lambda_function.backend.function_name
 }
 
-output "web_url" {
-  description = "HTTP URL (container exposed on port 80)"
-  value       = "http://${oci_core_instance.vm.public_ip}"
+output "ecr_repository_url" {
+  description = "ECR repository URL for Lambda image deployments"
+  value       = aws_ecr_repository.lambda.repository_url
 }

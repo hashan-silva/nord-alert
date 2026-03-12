@@ -1,0 +1,18 @@
+FROM maven:3.9.9-amazoncorretto-17 AS build
+WORKDIR /app
+COPY pom.xml ./
+COPY src ./src
+RUN mvn -q -DskipTests package
+
+FROM public.ecr.aws/lambda/java:17
+COPY --from=build /app/target/classes ${LAMBDA_TASK_ROOT}
+COPY --from=build /app/target/dependency/* ${LAMBDA_TASK_ROOT}/lib/
+RUN dnf install -y curl \
+  && dnf clean all
+USER 1000
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD curl --fail --silent -XPOST http://127.0.0.1:8080/2015-03-31/functions/function/invocations \
+    -d '{"version":"2.0","routeKey":"$default","rawPath":"/health","rawQueryString":"","headers":{},"requestContext":{"http":{"method":"GET","path":"/health","sourceIp":"127.0.0.1","userAgent":"healthcheck"}},"isBase64Encoded":false}' \
+    >/dev/null || exit 1
+CMD ["com.hashan0314.nordalert.backend.StreamLambdaHandler::handleRequest"]

@@ -1,16 +1,17 @@
-# NordAlert — Agent Guide (Node + Flutter)
+# NordAlert — Agent Guide (Java + Flutter)
 
-This document adapts the sample agent guidelines for a Node.js + TypeScript backend and a Flutter mobile app, plus Terraform IaC. Follow it when contributing or using an AI agent on this repo.
+This document adapts the sample agent guidelines for a Java backend, a Flutter mobile app, and Terraform IaC. Follow it when contributing or using an AI agent on this repo.
 
 ## Project Structure
-- `backend/`: Node.js + TypeScript backend
-  - `src/index.ts`: Fastify HTTP entrypoint (`/alerts`)
-  - `src/adapters/`: External data sources (Polisen, SMHI, Krisinformation, SCB, ArcGIS)
-  - `src/services/`: Orchestration (aggregation, notifications)
-  - `src/models/`: Domain types (e.g., `alert.ts`)
-  - Build artifacts in `dist/`
+- `backend/`: Java 17 backend
+  - `src/main/java/com/hashan0314/nordalert/backend/NordAlertApplication.java`: Spring Boot entrypoint
+  - `src/main/java/com/hashan0314/nordalert/backend/adapters/`: External data sources (Polisen, SMHI, Krisinformation)
+  - `src/main/java/com/hashan0314/nordalert/backend/services/`: Orchestration and aggregation
+  - `src/main/java/com/hashan0314/nordalert/backend/models/`: Domain types
+  - `src/main/java/com/hashan0314/nordalert/backend/controllers/`: HTTP endpoints
+  - Build artifacts in `target/`
 - `mobile/`: Flutter app (Dart, BLoC)
-- `terraform/`: Oracle Cloud IaC (`main.tf`, `variables.tf`, `outputs.tf`)
+- `terraform/`: AWS serverless IaC (`main.tf`, `variables.tf`, `outputs.tf`)
 - `.github/workflows/`: CI/CD (build, deploy, Terraform, security scans)
 - `sonar-project.properties`: SonarCloud configuration (scans `backend/`)
 
@@ -18,33 +19,41 @@ This document adapts the sample agent guidelines for a Node.js + TypeScript back
 - Make minimal, task-scoped changes; avoid unrelated edits.
 - Read existing docs first (`README.md`, this file, workflow YAMLs).
 - Explore the repo before coding (`ls`, open files, skim structure).
+- Prefer configured MCP servers over ad hoc shell or web lookups when they cover the task.
 - Do not commit from the agent; use read-only git commands for context.
 - Validate locally before ending a task. See Validation Checklists.
 - Always propose a plan with a short TODO list and wait for explicit user approval before executing.
 
+## MCP Usage
+- Use the configured `github` MCP server for repository contents, pull requests, issues, branches, releases, and review actions when possible.
+- Use the configured `terraform` MCP server for provider, module, and registry documentation before falling back to manual searches.
+- Use the configured `sonarqube` MCP server for code quality findings, metrics, rules, and issue status when Sonar data is relevant.
+- Run Sonar analysis through the configured `sonarqube` MCP server for backend code changes when practical, and review the reported findings before finishing the task.
+- Fall back to shell commands or web research only when the MCP servers do not expose the needed data or action.
+
 ## Architecture & State
-- Backend: Keep I/O in `src/adapters/`, pure domain in `src/models/`, coordination in `src/services/`, and HTTP wiring in `src/index.ts`.
+- Backend: Keep I/O in `adapters`, pure domain in `models`, coordination in `services`, and HTTP wiring in `controllers`.
 - Mobile: Use Flutter BLoC for state; prefer deriving UI state from events/data rather than ad-hoc booleans. Persist only what’s necessary (e.g., base URL) via `shared_preferences`.
 - Single source of truth: Avoid duplicating state across layers.
 
 ## Coding Style
-- TypeScript: strict mode, 2 spaces, single quotes, semicolons.
+- Java: target Amazon Corretto 17, use Spring Boot conventions, 2 spaces, and keep packages under `com.hashan0314.nordalert.backend`.
 - Dart/Flutter: follow `flutter_lints`; keep widgets small and composable.
-- Naming: PascalCase for types/classes; camelCase for vars/functions; filenames lowercase (e.g., `polisen.ts`).
+- Naming: PascalCase for Java types/classes; camelCase for vars/functions; lowercase package names.
 - Errors: Backend code should bubble meaningful errors; avoid blanket try/catch. Flutter dev code can assert, but production UI should handle failures gracefully.
 
 ## Backend — Dev & Build
-- Install deps: `cd backend && npm ci`
-- Run dev: `npm run start` (Fastify on `http://localhost:3000`)
-- Build: `npm run build` (emits `dist/`)
-- Docker: `docker build -t nord-alert-backend backend && docker run -p 3000:3000 nord-alert-backend`
+- Run dev: `cd backend && mvn spring-boot:run` (Spring Boot on `http://localhost:8080`)
+- Build: `cd backend && mvn package` (emits `target/`)
+- Docker: `docker build -t nord-alert-backend backend && docker run -p 8080:8080 nord-alert-backend`
+- Lambda image: `docker build -f Dockerfile.lambda -t nord-alert-backend-lambda backend && docker run -p 9000:8080 nord-alert-backend-lambda`
 
 ## Mobile — Dev & Checks
 - Setup: `cd mobile && flutter pub get`
 - Format: `dart format .` then `dart format --output=none --set-exit-if-changed .`
 - Analyze: `flutter analyze --fatal-infos --fatal-warnings`
 - Test: `flutter test`
-- Run: `flutter run --dart-define=BACKEND_BASE_URL=http://<host>:3000`
+- Run: `flutter run --dart-define=BACKEND_BASE_URL=http://<host>:8080`
 
 ## Terraform — IaC
 - Validate: `terraform fmt -check -recursive`
@@ -56,9 +65,11 @@ This document adapts the sample agent guidelines for a Node.js + TypeScript back
 ## Mandatory Validation (Before Finishing a Task)
 Perform the checks relevant to the files you changed:
 
-Backend (TypeScript)
-- `cd backend && npm run build`
-- If Dockerfile changed: `docker build backend` and verify `/alerts` responds: `docker run -p 3000:3000 <image>` then `curl http://localhost:3000/alerts`
+Backend (Java)
+- `cd backend && mvn package`
+- Run Sonar analysis for backend code changes via the configured `sonarqube` MCP server when the project is available there.
+- If `backend/Dockerfile` changed: `docker build backend` and verify `/alerts` responds from `docker run -p 8080:8080 <image>`.
+- If `backend/Dockerfile.lambda` changed: `docker build -f backend/Dockerfile.lambda backend` and verify the Lambda container starts locally with `docker run -p 9000:8080 <image>` and a Lambda invoke request.
 
 Mobile (Flutter)
 - `cd mobile && flutter pub get`
@@ -76,11 +87,11 @@ Terraform
 - Branch from `main` (do not commit directly to `main`).
 - Use Conventional Commit prefixes where possible (`feat:`, `fix:`, `chore:`) and reference issues (e.g., `#23`).
 - Open a PR with: summary, scope, verification steps, expected deployment impact, and screenshots/logs when helpful.
-- Merge only after CI passes (backend build, Terraform checks, tfsec, tflint, Flutter analyze/test).
+- Merge only after CI passes (backend container build, Terraform checks, tfsec, tflint, Flutter analyze/test).
 
 ## Secrets & Configuration
-- Never commit secrets. Use GitHub Secrets for CI/CD (see README for required secrets: Docker Hub, OCI credentials).
-- Backend: `PORT` defaults to 3000; external API keys via env/secret managers.
+- Never commit secrets. Use GitHub Secrets for CI/CD (see README for required secrets: Docker Hub, AWS credentials). Default AWS region is Stockholm (`eu-north-1`) unless CI overrides it.
+- Backend: `PORT` defaults to 8080 for local Spring Boot execution; the Lambda container runtime also listens on port 8080 locally.
 - Mobile: Provide `BACKEND_BASE_URL` via `Settings` dialog or `--dart-define`.
 - Terraform: Prefer a remote backend (e.g., Terraform Cloud) to keep state stable and idempotent between runs.
 
@@ -88,6 +99,7 @@ Terraform
 - Changes are minimal and focused; no stray file churn.
 - Code aligns with module boundaries and naming conventions.
 - All relevant validation steps above are green.
+- Sonar findings were checked for backend code changes, or the lack of Sonar access was noted.
 - Docs updated if behavior or interfaces changed.
 -
 ## Planning & Approvals

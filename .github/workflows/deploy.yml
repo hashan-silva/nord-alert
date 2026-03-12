@@ -16,9 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/nord-alert-backend
-      TFC_ORG: hashan-silva
-      TFC_HOST: app.terraform.io
-      TFC_WS_PREFIX: nord-alert-
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ECR_REPOSITORY: nord-alert-backend
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +25,6 @@ jobs:
         id: ws
         shell: bash
         run: |
-          # Sanitize branch name for Terraform Cloud workspace (allow letters, numbers, -, _)
           SAFE=$(echo "${GITHUB_REF_NAME}" | sed -E 's/[^A-Za-z0-9_-]+/-/g')
           echo "name=${SAFE}" >> "$GITHUB_OUTPUT"
 
@@ -47,11 +45,64 @@ jobs:
         id: img
         shell: bash
         run: |
+          echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve AWS account and image URIs
+        id: aws
+        shell: bash
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          ECR_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          FUNCTION_NAME="nord-alert-${{ steps.ws.outputs.name }}-backend"
           if [ "${{ steps.backend_changed.outputs.changed }}" = "true" ]; then
-            echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            LAMBDA_IMAGE_URI="${ECR_IMAGE}:${{ steps.img.outputs.tag }}"
           else
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
+            LAMBDA_IMAGE_URI=$(aws lambda get-function \
+              --function-name "${FUNCTION_NAME}" \
+              --query 'Code.ImageUri' \
+              --output text)
           fi
+          echo "account_id=${ACCOUNT_ID}" >> "$GITHUB_OUTPUT"
+          echo "ecr_registry=${ECR_REGISTRY}" >> "$GITHUB_OUTPUT"
+          echo "ecr_image=${ECR_IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "lambda_image_uri=${LAMBDA_IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Write Terraform variables file (ci.auto.tfvars)
+        shell: bash
+        working-directory: terraform
+        run: |
+          cat > ci.auto.tfvars <<EOF
+          aws_region          = "${{ env.AWS_REGION }}"
+          ecr_repository_name = "${{ env.ECR_REPOSITORY }}"
+          lambda_image_uri    = "${{ steps.aws.outputs.lambda_image_uri }}"
+          workspace_name      = "${{ steps.ws.outputs.name }}"
+          EOF
+
+      - name: Terraform Init (Terraform Cloud Remote Backend)
+        working-directory: terraform
+        env:
+          TF_WORKSPACE: ${{ steps.ws.outputs.name }}
+        run: terraform init -input=false -reconfigure
+
+      - name: Ensure ECR repository exists
+        working-directory: terraform
+        env:
+          TF_WORKSPACE: ${{ steps.ws.outputs.name }}
+        run: terraform apply -target=aws_ecr_repository.lambda -target=aws_ecr_lifecycle_policy.lambda -auto-approve
 
       - name: Set up Docker Buildx
         if: steps.backend_changed.outputs.changed == 'true'
@@ -64,48 +115,36 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Log in to Amazon ECR
+        if: steps.backend_changed.outputs.changed == 'true'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker Hub image
         if: steps.backend_changed.outputs.changed == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64
           push: true
+          provenance: false
           tags: |
             ${{ env.IMAGE_REPO }}:latest
             ${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}
-          cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Write Terraform variables file (ci.auto.tfvars)
-        shell: bash
-        working-directory: terraform
-        run: |
-          cat > ci.auto.tfvars <<EOF
-          tenancy_ocid     = "${{ secrets.OCI_TENANCY_OCID }}"
-          user_ocid        = "${{ secrets.OCI_USER_OCID }}"
-          fingerprint      = "${{ secrets.OCI_FINGERPRINT }}"
-          private_key      = <<EOKEY
-          ${{ secrets.OCI_PRIVATE_KEY }}
-          EOKEY
-          region           = "${{ secrets.OCI_REGION }}"
-          compartment_ocid = "${{ secrets.OCI_COMPARTMENT_OCID }}"
-          image            = "${{ env.IMAGE_REPO }}:${{ steps.img.outputs.tag }}"
-          ssh_public_key   = "${{ secrets.SSH_PUBLIC_KEY }}"
-          workspace_name   = "${{ steps.ws.outputs.name }}"
-          EOF
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Build and push Lambda image
+        if: steps.backend_changed.outputs.changed == 'true'
+        uses: docker/build-push-action@v5
         with:
-          terraform_wrapper: false
-          # Configure CLI credentials for Terraform Cloud
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-
-      - name: Terraform Init (Terraform Cloud Remote Backend)
-        working-directory: terraform
-        env:
-          TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-        run: terraform init -input=false -reconfigure
+          context: ./backend
+          file: ./backend/Dockerfile.lambda
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: |
+            ${{ steps.aws.outputs.ecr_image }}:${{ steps.img.outputs.tag }}
+          cache-to: type=gha,mode=max
 
       - name: Terraform Apply
         working-directory: terraform

@@ -4,10 +4,8 @@ permissions:
 name: Trivy IaC Scan
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   trivy-iac-scan:

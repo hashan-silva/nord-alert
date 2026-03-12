@@ -1,20 +1,24 @@
-FROM node:20-alpine AS build
+FROM maven:3.9.9-amazoncorretto-17 AS base
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
+COPY pom.xml ./
+COPY src ./src
 
-FROM node:20-alpine
+FROM base AS test
+RUN mvn -q test
+
+FROM base AS build
+RUN mvn -q -DskipTests package
+
+FROM amazoncorretto:17
 WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=3000
-COPY --from=build /app/dist ./dist
-COPY package*.json ./
-RUN npm ci --omit=dev \
-  && chown -R node:node /app
-USER node
-EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD ["node","-e","const u='http://127.0.0.1:'+(process.env.PORT||3000)+'/health'; const c=new AbortController(); const t=setTimeout(()=>c.abort(),3000); fetch(u,{signal:c.signal}).then(r=>{clearTimeout(t); process.exit(r.ok?0:1)}).catch(()=>{clearTimeout(t); process.exit(1)});"]
-CMD ["node", "dist/index.js"]
+ENV PORT=8080
+COPY --from=build /app/target/backend-1.0.0.jar ./app.jar
+RUN yum install -y curl \
+  && yum clean all \
+  && useradd --system --create-home --uid 10001 appuser \
+  && chown -R appuser:appuser /app
+USER appuser
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl --fail --silent "http://127.0.0.1:${PORT}/health" || exit 1
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
