@@ -99,6 +99,7 @@ jobs:
           push: true
           provenance: false
           tags: ${{ steps.tags.outputs.backend_tags }}
+          cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Build and push web image
@@ -113,4 +114,5 @@ jobs:
           build-args: |
             REACT_APP_BACKEND_BASE_URL=${{ env.WEB_BACKEND_BASE_URL }}
           tags: ${{ steps.tags.outputs.web_tags }}
+          cache-from: type=gha
           cache-to: type=gha,mode=max

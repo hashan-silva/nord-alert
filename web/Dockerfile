@@ -1,7 +1,9 @@
+# syntax=docker/dockerfile:1.7
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json ./
-RUN npm install
+COPY package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
 ARG REACT_APP_BACKEND_BASE_URL=http://localhost:8080
 ENV REACT_APP_BACKEND_BASE_URL=${REACT_APP_BACKEND_BASE_URL}
