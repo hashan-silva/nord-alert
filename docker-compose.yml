@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nord-alert-backend
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_BACKEND_BASE_URL: http://localhost:8080
+    container_name: nord-alert-web
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"

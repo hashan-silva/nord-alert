@@ -125,6 +125,18 @@ resource "aws_lambda_function" "backend" {
 resource "aws_apigatewayv2_api" "backend" {
   name          = "${local.name_prefix}-http-api"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_headers = ["content-type", "authorization", "x-requested-with"]
+    allow_methods = ["GET", "OPTIONS"]
+    allow_origins = [
+      "http://localhost:3000",
+      "https://${aws_cloudfront_distribution.web.domain_name}"
+    ]
+    expose_headers    = ["content-type"]
+    max_age           = 3600
+    allow_credentials = false
+  }
 }
 
 resource "aws_apigatewayv2_integration" "backend" {
