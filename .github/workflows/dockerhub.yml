@@ -9,9 +9,10 @@ on:
     paths:
       - 'backend/**'
       - 'web/**'
+      - 'terraform/**'
       - '.github/workflows/dockerhub.yml'
       - 'backend/Dockerfile'
-      - 'backend/Dockerfile.lambda'
+      - 'web/Dockerfile'
 
 concurrency:
   group: dockerhub-${{ github.ref_name }}
@@ -31,13 +32,13 @@ jobs:
         id: changes
         shell: bash
         run: |
-          if git diff --quiet "$BASE" "$HEAD" -- backend; then
+          if git diff --quiet "$BASE" "$HEAD" -- backend terraform; then
             echo "backend_changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "backend_changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-          if git diff --quiet "$BASE" "$HEAD" -- web; then
+          if git diff --quiet "$BASE" "$HEAD" -- web terraform; then
             echo "web_changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "web_changed=true" >> "$GITHUB_OUTPUT"
