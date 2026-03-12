@@ -23,9 +23,11 @@ provider "aws" {
 }
 
 locals {
-  workspace       = var.workspace_name
-  name_prefix     = "${var.project_name}-${local.workspace}"
-  web_bucket_name = lower("${local.name_prefix}-web")
+  workspace                   = var.workspace_name
+  name_prefix                 = "${var.project_name}-${local.workspace}"
+  web_bucket_name             = lower("${local.name_prefix}-web")
+  web_logs_bucket_name        = lower("${local.name_prefix}-web-logs")
+  web_access_logs_bucket_name = lower("${local.name_prefix}-web-access-logs")
 }
 
 data "aws_ecr_repository" "lambda" {
@@ -202,6 +204,94 @@ resource "aws_s3_bucket_public_access_block" "web" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket" "web_access_logs" {
+  bucket = local.web_access_logs_bucket_name
+}
+
+resource "aws_s3_bucket_ownership_controls" "web_access_logs" {
+  bucket = aws_s3_bucket.web_access_logs.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "web_access_logs" {
+  bucket = aws_s3_bucket.web_access_logs.id
+  acl    = "log-delivery-write"
+
+  depends_on = [aws_s3_bucket_ownership_controls.web_access_logs]
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "web_access_logs" {
+  bucket = aws_s3_bucket.web_access_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "web_access_logs" {
+  bucket = aws_s3_bucket.web_access_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_logging" "web" {
+  bucket        = aws_s3_bucket.web.id
+  target_bucket = aws_s3_bucket.web_access_logs.id
+  target_prefix = "web/"
+}
+
+resource "aws_s3_bucket" "web_logs" {
+  bucket = local.web_logs_bucket_name
+}
+
+resource "aws_s3_bucket_ownership_controls" "web_logs" {
+  bucket = aws_s3_bucket.web_logs.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "web_logs" {
+  bucket = aws_s3_bucket.web_logs.id
+  acl    = "log-delivery-write"
+
+  depends_on = [aws_s3_bucket_ownership_controls.web_logs]
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "web_logs" {
+  bucket = aws_s3_bucket.web_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "web_logs" {
+  bucket = aws_s3_bucket.web_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_logging" "web_logs" {
+  bucket        = aws_s3_bucket.web_logs.id
+  target_bucket = aws_s3_bucket.web_access_logs.id
+  target_prefix = "web-logs/"
+}
+
 resource "aws_cloudfront_origin_access_control" "web" {
   name                              = "${local.name_prefix}-web-oac"
   description                       = "Origin access control for NordAlert web assets"
@@ -214,6 +304,12 @@ resource "aws_cloudfront_distribution" "web" {
   enabled             = true
   default_root_object = "index.html"
   price_class         = "PriceClass_100"
+
+  logging_config {
+    bucket          = aws_s3_bucket.web_logs.bucket_domain_name
+    include_cookies = false
+    prefix          = "cloudfront/"
+  }
 
   origin {
     domain_name              = aws_s3_bucket.web.bucket_regional_domain_name
