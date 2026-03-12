@@ -1,4 +1,4 @@
-name: Build and Deploy Backend
+name: Build and Deploy Platform
 
 permissions:
   contents: read
@@ -8,11 +8,11 @@ on:
     branches: [ main, 'v*' ]
 
 concurrency:
-  group: deploy-main
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  build-push-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     env:
       IMAGE_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/nord-alert-backend
@@ -40,6 +40,11 @@ jobs:
         env:
           BASE: ${{ github.event.before }}
           HEAD: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Compute image tags
         id: img
@@ -114,7 +119,7 @@ jobs:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
         run: terraform init -input=false
 
-      - name: Ensure ECR repository exists
+      - name: Apply ECR lifecycle policy
         working-directory: terraform
         env:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
@@ -161,8 +166,46 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Terraform Apply
+        id: tf_apply
         working-directory: terraform
         env:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
         run: terraform apply -auto-approve
+
+      - name: Capture Terraform outputs
+        id: tf_outputs
+        working-directory: terraform
+        env:
+          TF_WORKSPACE: ${{ steps.ws.outputs.name }}
+        run: |
+          echo "api_url=$(terraform output -raw api_url)" >> "$GITHUB_OUTPUT"
+          echo "web_bucket_name=$(terraform output -raw web_bucket_name)" >> "$GITHUB_OUTPUT"
+          echo "web_distribution_id=$(terraform output -raw web_distribution_id)" >> "$GITHUB_OUTPUT"
+          echo "web_distribution_domain_name=$(terraform output -raw web_distribution_domain_name)" >> "$GITHUB_OUTPUT"
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install
+
+      - name: Build web dashboard
+        working-directory: web
+        env:
+          REACT_APP_BACKEND_BASE_URL: ${{ steps.tf_outputs.outputs.api_url }}
+        run: npm run build
+
+      - name: Upload web dashboard to S3
+        run: aws s3 sync web/dist "s3://${{ steps.tf_outputs.outputs.web_bucket_name }}" --delete
+
+      - name: Disable cache for index.html
+        run: |
+          aws s3 cp web/dist/index.html \
+            "s3://${{ steps.tf_outputs.outputs.web_bucket_name }}/index.html" \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "text/html"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ steps.tf_outputs.outputs.web_distribution_id }}" \
+            --paths "/*"
 
