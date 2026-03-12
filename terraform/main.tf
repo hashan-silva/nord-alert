@@ -29,11 +29,32 @@ locals {
 
 resource "aws_ecr_repository" "lambda" {
   name                 = var.ecr_repository_name
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
   }
+}
+
+resource "aws_ecr_lifecycle_policy" "lambda" {
+  repository = aws_ecr_repository.lambda.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Retain only the three most recent Lambda images"
+        selection = {
+          tagStatus   = "any"
+          countType   = "imageCountMoreThan"
+          countNumber = 3
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
 }
 
 resource "aws_iam_role" "lambda" {
@@ -56,6 +77,39 @@ resource "aws_iam_role" "lambda" {
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role" "apigateway_logs" {
+  name = "${local.name_prefix}-apigw-logs-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "apigateway_logs" {
+  role       = aws_iam_role.apigateway_logs.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+resource "aws_api_gateway_account" "main" {
+  cloudwatch_role_arn = aws_iam_role.apigateway_logs.arn
+
+  depends_on = [aws_iam_role_policy_attachment.apigateway_logs]
+}
+
+resource "aws_cloudwatch_log_group" "apigateway" {
+  name              = "/aws/apigateway/${local.name_prefix}-http-api"
+  retention_in_days = 14
 }
 
 resource "aws_lambda_function" "backend" {
@@ -93,6 +147,24 @@ resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.backend.id
   name        = "$default"
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.apigateway.arn
+    format = jsonencode({
+      requestId          = "$context.requestId"
+      ip                 = "$context.identity.sourceIp"
+      requestTime        = "$context.requestTime"
+      httpMethod         = "$context.httpMethod"
+      routeKey           = "$context.routeKey"
+      status             = "$context.status"
+      protocol           = "$context.protocol"
+      responseLength     = "$context.responseLength"
+      integrationError   = "$context.integrationErrorMessage"
+      integrationStatus  = "$context.integration.status"
+    })
+  }
+
+  depends_on = [aws_api_gateway_account.main]
 }
 
 resource "aws_lambda_permission" "apigw" {

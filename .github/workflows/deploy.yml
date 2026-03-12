@@ -45,11 +45,7 @@ jobs:
         id: img
         shell: bash
         run: |
-          if [ "${{ steps.backend_changed.outputs.changed }}" = "true" ]; then
-            echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          fi
+          echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -65,10 +61,19 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           ECR_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          FUNCTION_NAME="nord-alert-${{ steps.ws.outputs.name }}-backend"
+          if [ "${{ steps.backend_changed.outputs.changed }}" = "true" ]; then
+            LAMBDA_IMAGE_URI="${ECR_IMAGE}:${{ steps.img.outputs.tag }}"
+          else
+            LAMBDA_IMAGE_URI=$(aws lambda get-function \
+              --function-name "${FUNCTION_NAME}" \
+              --query 'Code.ImageUri' \
+              --output text)
+          fi
           echo "account_id=${ACCOUNT_ID}" >> "$GITHUB_OUTPUT"
           echo "ecr_registry=${ECR_REGISTRY}" >> "$GITHUB_OUTPUT"
           echo "ecr_image=${ECR_IMAGE}" >> "$GITHUB_OUTPUT"
-          echo "lambda_image_uri=${ECR_IMAGE}:${{ steps.img.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          echo "lambda_image_uri=${LAMBDA_IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -97,7 +102,7 @@ jobs:
         working-directory: terraform
         env:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-        run: terraform apply -target=aws_ecr_repository.lambda -auto-approve
+        run: terraform apply -target=aws_ecr_repository.lambda -target=aws_ecr_lifecycle_policy.lambda -auto-approve
 
       - name: Set up Docker Buildx
         if: steps.backend_changed.outputs.changed == 'true'
@@ -138,7 +143,6 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ${{ steps.aws.outputs.ecr_image }}:latest
             ${{ steps.aws.outputs.ecr_image }}:${{ steps.img.outputs.tag }}
           cache-to: type=gha,mode=max
 
