@@ -89,6 +89,17 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve backend version
+        id: backend_version
+        shell: bash
+        run: |
+          VERSION=$(sed -n '/<artifactId>backend<\/artifactId>/{n;s/.*<version>\(.*\)<\/version>.*/\1/p;}' backend/pom.xml)
+          if [ -z "$VERSION" ]; then
+            echo "Unable to resolve backend version from backend/pom.xml" >&2
+            exit 1
+          fi
+          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push backend image
         if: steps.changes.outputs.backend_changed == 'true'
         uses: docker/build-push-action@v5
@@ -113,6 +124,7 @@ jobs:
           provenance: false
           build-args: |
             REACT_APP_BACKEND_BASE_URL=${{ env.WEB_BACKEND_BASE_URL }}
+            REACT_APP_BACKEND_VERSION=${{ steps.backend_version.outputs.value }}
           tags: ${{ steps.tags.outputs.web_tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

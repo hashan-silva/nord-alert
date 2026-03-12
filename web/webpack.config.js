@@ -25,6 +25,21 @@ function resolveBackendVersion() {
 }
 
 const backendVersion = resolveBackendVersion();
+const publicPath = path.resolve(__dirname, 'public');
+
+class StaticAssetsPlugin {
+  apply(compiler) {
+    compiler.hooks.afterEmit.tap('StaticAssetsPlugin', () => {
+      if (!fs.existsSync(publicPath)) {
+        return;
+      }
+
+      fs.cpSync(publicPath, compiler.options.output.path, {
+        recursive: true
+      });
+    });
+  }
+}
 
 module.exports = (_, argv) => ({
   entry: path.resolve(__dirname, 'src/main.tsx'),
@@ -62,6 +77,7 @@ module.exports = (_, argv) => ({
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, 'index.html')
     }),
+    new StaticAssetsPlugin(),
     new webpack.DefinePlugin({
       'process.env.REACT_APP_BACKEND_BASE_URL': JSON.stringify(
         process.env.REACT_APP_BACKEND_BASE_URL || ''

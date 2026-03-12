@@ -4,23 +4,23 @@ export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#0b5fff'
+      main: '#0a4f86'
     },
     secondary: {
-      main: '#ff6b2c'
+      main: '#d4a514'
     },
     background: {
-      default: '#f4f7fb',
-      paper: '#ffffff'
+      default: '#f6f1e6',
+      paper: '#fffdf8'
     },
     success: {
-      main: '#14866d'
+      main: '#23715f'
     },
     warning: {
-      main: '#c97300'
+      main: '#b7860b'
     },
     error: {
-      main: '#c7384f'
+      main: '#b53a3f'
     }
   },
   shape: {
@@ -28,6 +28,9 @@ export const theme = createTheme({
   },
   typography: {
     fontFamily: '"Space Grotesk", sans-serif',
+    allVariants: {
+      color: '#15324b'
+    },
     h1: {
       fontSize: '3rem',
       fontWeight: 700
