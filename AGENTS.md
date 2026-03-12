@@ -1,6 +1,6 @@
-# NordAlert — Agent Guide (Java + Flutter)
+# NordAlert — Agent Guide (Java + React)
 
-This document adapts the sample agent guidelines for a Java backend, a Flutter mobile app, and Terraform IaC. Follow it when contributing or using an AI agent on this repo.
+This document adapts the sample agent guidelines for a Java backend, a React web dashboard, and Terraform IaC. Follow it when contributing or using an AI agent on this repo.
 
 ## Project Structure
 - `backend/`: Java 17 backend
@@ -10,7 +10,7 @@ This document adapts the sample agent guidelines for a Java backend, a Flutter m
   - `src/main/java/com/hashan0314/nordalert/backend/models/`: Domain types
   - `src/main/java/com/hashan0314/nordalert/backend/controllers/`: HTTP endpoints
   - Build artifacts in `target/`
-- `mobile/`: Flutter app (Dart, BLoC)
+- `web/`: React dashboard (TypeScript, Material UI, SCSS)
 - `terraform/`: AWS serverless IaC (`main.tf`, `variables.tf`, `outputs.tf`)
 - `.github/workflows/`: CI/CD (build, deploy, Terraform, security scans)
 - `sonar-project.properties`: SonarCloud configuration (scans `backend/`)
@@ -33,14 +33,14 @@ This document adapts the sample agent guidelines for a Java backend, a Flutter m
 
 ## Architecture & State
 - Backend: Keep I/O in `adapters`, pure domain in `models`, coordination in `services`, and HTTP wiring in `controllers`.
-- Mobile: Use Flutter BLoC for state; prefer deriving UI state from events/data rather than ad-hoc booleans. Persist only what’s necessary (e.g., base URL) via `shared_preferences`.
+- Web: Keep API access in small client modules, UI composition in focused React components, and styling in SCSS files layered around Material UI.
 - Single source of truth: Avoid duplicating state across layers.
 
 ## Coding Style
 - Java: target Amazon Corretto 17, use Spring Boot conventions, 2 spaces, and keep packages under `com.hashan0314.nordalert.backend`.
-- Dart/Flutter: follow `flutter_lints`; keep widgets small and composable.
+- React/TypeScript: prefer small typed components, keep API models explicit, and use SCSS for layout/theme structure rather than inline styling sprawl.
 - Naming: PascalCase for Java types/classes; camelCase for vars/functions; lowercase package names.
-- Errors: Backend code should bubble meaningful errors; avoid blanket try/catch. Flutter dev code can assert, but production UI should handle failures gracefully.
+- Errors: Backend code should bubble meaningful errors; avoid blanket try/catch. Web UI should surface loading and error states explicitly.
 
 ## Backend — Dev & Build
 - Run dev: `cd backend && mvn spring-boot:run` (Spring Boot on `http://localhost:8080`)
@@ -48,12 +48,11 @@ This document adapts the sample agent guidelines for a Java backend, a Flutter m
 - Docker: `docker build -t nord-alert-backend backend && docker run -p 8080:8080 nord-alert-backend`
 - Lambda image: `docker build -f Dockerfile.lambda -t nord-alert-backend-lambda backend && docker run -p 9000:8080 nord-alert-backend-lambda`
 
-## Mobile — Dev & Checks
-- Setup: `cd mobile && flutter pub get`
-- Format: `dart format .` then `dart format --output=none --set-exit-if-changed .`
-- Analyze: `flutter analyze --fatal-infos --fatal-warnings`
-- Test: `flutter test`
-- Run: `flutter run --dart-define=BACKEND_BASE_URL=http://<host>:8080`
+## Web — Dev & Checks
+- Setup: `cd web && npm install`
+- Run dev server: `cd web && npm start`
+- Build: `cd web && npm run build`
+- Backend URL: set `REACT_APP_BACKEND_BASE_URL=http://<host>:8080`
 
 ## Terraform — IaC
 - Validate: `terraform fmt -check -recursive`
@@ -71,11 +70,9 @@ Backend (Java)
 - If `backend/Dockerfile` changed: `docker build backend` and verify `/alerts` responds from `docker run -p 8080:8080 <image>`.
 - If `backend/Dockerfile.lambda` changed: `docker build -f backend/Dockerfile.lambda backend` and verify the Lambda container starts locally with `docker run -p 9000:8080 <image>` and a Lambda invoke request.
 
-Mobile (Flutter)
-- `cd mobile && flutter pub get`
-- `dart format --output=none --set-exit-if-changed .`
-- `flutter analyze --fatal-infos --fatal-warnings`
-- `flutter test`
+Web (React)
+- `cd web && npm install`
+- `cd web && npm run build`
 
 Terraform
 - `cd terraform && terraform fmt -check -recursive`
@@ -87,13 +84,13 @@ Terraform
 - Branch from `main` (do not commit directly to `main`).
 - Use Conventional Commit prefixes where possible (`feat:`, `fix:`, `chore:`) and reference issues (e.g., `#23`).
 - Open a PR with: summary, scope, verification steps, expected deployment impact, and screenshots/logs when helpful.
-- Merge only after CI passes (backend container build, Terraform checks, tfsec, tflint, Flutter analyze/test).
+- Merge only after CI passes (backend container build, Terraform checks, tfsec, tflint, web build).
 
 ## Secrets & Configuration
 - Never commit secrets. Use GitHub Secrets for CI/CD (see README for required secrets: Docker Hub, AWS credentials). Default AWS region is Stockholm (`eu-north-1`) unless CI overrides it.
 - Backend: `PORT` defaults to 8080 for local Spring Boot execution; the Lambda container runtime also listens on port 8080 locally.
-- Mobile: Provide `BACKEND_BASE_URL` via `Settings` dialog or `--dart-define`.
-- Terraform: Prefer a remote backend (e.g., Terraform Cloud) to keep state stable and idempotent between runs.
+- Web: Provide `REACT_APP_BACKEND_BASE_URL` when building the dashboard.
+- Terraform: Prefer a remote backend (e.g., Terraform Cloud) to keep state stable and idempotent between runs. The frontend is deployed to S3 behind CloudFront.
 
 ## Reviewer/Agent Checklist
 - Changes are minimal and focused; no stray file churn.
@@ -101,7 +98,6 @@ Terraform
 - All relevant validation steps above are green.
 - Sonar findings were checked for backend code changes, or the lack of Sonar access was noted.
 - Docs updated if behavior or interfaces changed.
--
 ## Planning & Approvals
 - Before making any changes, present a concise plan and a short TODO list that outlines the intended steps.
 - Do not execute the plan until the user explicitly approves it. If unclear, ask for confirmation.
