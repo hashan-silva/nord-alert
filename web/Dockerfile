@@ -1,8 +1,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json ./
-COPY package-lock.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 ARG REACT_APP_BACKEND_BASE_URL=http://localhost:8080
 ENV REACT_APP_BACKEND_BASE_URL=${REACT_APP_BACKEND_BASE_URL}
