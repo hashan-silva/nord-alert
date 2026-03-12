@@ -13,7 +13,7 @@ FROM amazoncorretto:17
 WORKDIR /app
 ENV PORT=8080
 COPY --from=build /app/target/backend-1.0.0.jar ./app.jar
-RUN yum install -y curl \
+RUN yum install -y curl shadow-utils \
   && yum clean all \
   && useradd --system --create-home --uid 10001 appuser \
   && chown -R appuser:appuser /app
