@@ -4,9 +4,27 @@ const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const webPackage = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'));
-const backendPom = fs.readFileSync(path.resolve(__dirname, '../backend/pom.xml'), 'utf8');
-const backendVersionMatch = backendPom.match(/<artifactId>backend<\/artifactId>\s*<version>([^<]+)<\/version>/s);
-const backendVersion = backendVersionMatch ? backendVersionMatch[1] : 'unknown';
+const configuredBackendVersion = process.env.REACT_APP_BACKEND_VERSION;
+const backendPomPath = path.resolve(__dirname, '../backend/pom.xml');
+
+function resolveBackendVersion() {
+  if (configuredBackendVersion && configuredBackendVersion.length > 0) {
+    return configuredBackendVersion;
+  }
+
+  if (!fs.existsSync(backendPomPath)) {
+    return 'unknown';
+  }
+
+  const backendPom = fs.readFileSync(backendPomPath, 'utf8');
+  const backendVersionMatch = backendPom.match(
+    /<artifactId>backend<\/artifactId>\s*<version>([^<]+)<\/version>/s
+  );
+
+  return backendVersionMatch ? backendVersionMatch[1] : 'unknown';
+}
+
+const backendVersion = resolveBackendVersion();
 
 module.exports = (_, argv) => ({
   entry: path.resolve(__dirname, 'src/main.tsx'),
