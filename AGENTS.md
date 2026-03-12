@@ -19,9 +19,17 @@ This document adapts the sample agent guidelines for a Java backend, a Flutter m
 - Make minimal, task-scoped changes; avoid unrelated edits.
 - Read existing docs first (`README.md`, this file, workflow YAMLs).
 - Explore the repo before coding (`ls`, open files, skim structure).
+- Prefer configured MCP servers over ad hoc shell or web lookups when they cover the task.
 - Do not commit from the agent; use read-only git commands for context.
 - Validate locally before ending a task. See Validation Checklists.
 - Always propose a plan with a short TODO list and wait for explicit user approval before executing.
+
+## MCP Usage
+- Use the configured `github` MCP server for repository contents, pull requests, issues, branches, releases, and review actions when possible.
+- Use the configured `terraform` MCP server for provider, module, and registry documentation before falling back to manual searches.
+- Use the configured `sonarqube` MCP server for code quality findings, metrics, rules, and issue status when Sonar data is relevant.
+- Run Sonar analysis through the configured `sonarqube` MCP server for backend code changes when practical, and review the reported findings before finishing the task.
+- Fall back to shell commands or web research only when the MCP servers do not expose the needed data or action.
 
 ## Architecture & State
 - Backend: Keep I/O in `adapters`, pure domain in `models`, coordination in `services`, and HTTP wiring in `controllers`.
@@ -58,6 +66,7 @@ Perform the checks relevant to the files you changed:
 
 Backend (Java)
 - `cd backend && mvn package`
+- Run Sonar analysis for backend code changes via the configured `sonarqube` MCP server when the project is available there.
 - If Dockerfile changed: `docker build backend` and verify `/alerts` responds: `docker run -p 3000:3000 <image>` then `curl http://localhost:3000/alerts`
 
 Mobile (Flutter)
@@ -88,6 +97,7 @@ Terraform
 - Changes are minimal and focused; no stray file churn.
 - Code aligns with module boundaries and naming conventions.
 - All relevant validation steps above are green.
+- Sonar findings were checked for backend code changes, or the lack of Sonar access was noted.
 - Docs updated if behavior or interfaces changed.
 -
 ## Planning & Approvals
