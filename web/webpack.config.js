@@ -1,6 +1,45 @@
 const path = require('path');
+const fs = require('fs');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+
+const webPackage = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'));
+const configuredBackendVersion = process.env.REACT_APP_BACKEND_VERSION;
+const backendPomPath = path.resolve(__dirname, '../backend/pom.xml');
+
+function resolveBackendVersion() {
+  if (configuredBackendVersion && configuredBackendVersion.length > 0) {
+    return configuredBackendVersion;
+  }
+
+  if (!fs.existsSync(backendPomPath)) {
+    return 'unknown';
+  }
+
+  const backendPom = fs.readFileSync(backendPomPath, 'utf8');
+  const backendVersionMatch = backendPom.match(
+    /<artifactId>backend<\/artifactId>\s*<version>([^<]+)<\/version>/s
+  );
+
+  return backendVersionMatch ? backendVersionMatch[1] : 'unknown';
+}
+
+const backendVersion = resolveBackendVersion();
+const publicPath = path.resolve(__dirname, 'public');
+
+class StaticAssetsPlugin {
+  apply(compiler) {
+    compiler.hooks.afterEmit.tap('StaticAssetsPlugin', () => {
+      if (!fs.existsSync(publicPath)) {
+        return;
+      }
+
+      fs.cpSync(publicPath, compiler.options.output.path, {
+        recursive: true
+      });
+    });
+  }
+}
 
 module.exports = (_, argv) => ({
   entry: path.resolve(__dirname, 'src/main.tsx'),
@@ -38,10 +77,13 @@ module.exports = (_, argv) => ({
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, 'index.html')
     }),
+    new StaticAssetsPlugin(),
     new webpack.DefinePlugin({
       'process.env.REACT_APP_BACKEND_BASE_URL': JSON.stringify(
         process.env.REACT_APP_BACKEND_BASE_URL || ''
-      )
+      ),
+      'process.env.REACT_APP_WEB_VERSION': JSON.stringify(webPackage.version),
+      'process.env.REACT_APP_BACKEND_VERSION': JSON.stringify(backendVersion)
     })
   ],
   devServer: {

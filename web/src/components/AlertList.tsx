@@ -7,11 +7,47 @@ interface AlertListProps {
   alerts: AlertItem[];
 }
 
-const severityColor = {
-  high: 'error',
-  info: 'default',
-  medium: 'warning'
-} as const;
+const sourceLabels: Record<string, string> = {
+  krisinformation: 'Krisinformation',
+  polisen: 'Polisen',
+  smhi: 'SMHI'
+};
+
+const resourceChipSx: Record<string, object> = {
+  krisinformation: {
+    color: '#ffffff',
+    backgroundColor: '#23715f'
+  },
+  polisen: {
+    color: '#ffffff',
+    backgroundColor: '#0a4f86'
+  },
+  smhi: {
+    color: '#15324b',
+    backgroundColor: '#f0c649'
+  }
+};
+
+const severityChipSx: Record<string, object> = {
+  high: {
+    color: '#ffffff',
+    backgroundColor: '#b53a3f'
+  },
+  info: {
+    color: '#15324b',
+    backgroundColor: '#dbe7f2'
+  },
+  medium: {
+    color: '#4e3900',
+    backgroundColor: '#f1d88a'
+  }
+};
+
+const countyChipSx = {
+  color: '#0a4f86',
+  backgroundColor: '#eef4f8',
+  borderColor: 'rgba(10, 79, 134, 0.18)'
+};
 
 function formatTimestamp(value?: string) {
   if (!value) {
@@ -51,18 +87,26 @@ function AlertList({ alerts }: AlertListProps) {
                 <Stack spacing={1}>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Chip
-                      label={alert.source}
-                      color="primary"
+                      label={sourceLabels[alert.source] || alert.source}
                       size="small"
-                      variant="outlined"
+                      sx={resourceChipSx[alert.source] || resourceChipSx.polisen}
                     />
                     <Chip
                       label={alert.severity}
-                      color={severityColor[alert.severity as keyof typeof severityColor] || 'default'}
                       size="small"
+                      sx={
+                        severityChipSx[alert.severity as keyof typeof severityChipSx] ||
+                        severityChipSx.info
+                      }
                     />
                     {alert.areas?.map((area) => (
-                      <Chip key={area} label={area} size="small" variant="outlined" />
+                      <Chip
+                        key={area}
+                        label={area}
+                        size="small"
+                        variant="outlined"
+                        sx={countyChipSx}
+                      />
                     ))}
                   </Stack>
                   <Typography variant="h6">{alert.headline}</Typography>
