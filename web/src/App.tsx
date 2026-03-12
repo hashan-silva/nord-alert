@@ -19,6 +19,9 @@ import AlertList from './components/AlertList';
 import SummaryCard from './components/SummaryCard';
 import { type AlertItem, baseUrl, fetchAlerts } from './lib/api';
 
+const webVersion = process.env.REACT_APP_WEB_VERSION || 'unknown';
+const backendVersion = process.env.REACT_APP_BACKEND_VERSION || 'unknown';
+
 const severityOptions = [
   { label: 'All severities', value: '' },
   { label: 'Info and above', value: 'info' },
@@ -89,8 +92,24 @@ function App() {
             alignItems={{ xs: 'flex-start', md: 'flex-end' }}
           >
             <Box>
+              <Stack className="brand-lockup" direction="row" spacing={2} alignItems="center">
+                <Box
+                  component="img"
+                  src="/logo.png"
+                  alt="NordAlert logo"
+                  className="brand-lockup__logo"
+                />
+                <Box>
+                  <Typography className="hero__eyebrow" variant="overline">
+                    NordAlert dashboard
+                  </Typography>
+                  <Typography className="brand-lockup__wordmark" variant="h3">
+                    NordAlert
+                  </Typography>
+                </Box>
+              </Stack>
               <Typography className="hero__eyebrow" variant="overline">
-                NordAlert dashboard
+                Operational overview
               </Typography>
               <Typography variant="h1">Swedish public alerts in one live command view.</Typography>
               <Typography className="hero__copy" variant="body1">
@@ -219,6 +238,26 @@ function App() {
             </Paper>
           </Grid>
         </Grid>
+
+        <Paper className="footer-bar" elevation={0}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between"
+            spacing={2}
+          >
+            <Typography color="text.secondary" variant="body2">
+              NordAlert monitoring surface for backend alert aggregation and web operations.
+            </Typography>
+            <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+              <Typography className="footer-bar__tag" variant="body2">
+                Web v{webVersion}
+              </Typography>
+              <Typography className="footer-bar__tag" variant="body2">
+                Backend v{backendVersion}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Paper>
       </Container>
     </Box>
   );

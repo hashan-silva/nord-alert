@@ -32,6 +32,22 @@ body {
   box-shadow: $shadow-soft;
 }
 
+.brand-lockup {
+  margin-bottom: 18px;
+}
+
+.brand-lockup__logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(8, 27, 51, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.brand-lockup__wordmark {
+  color: #fff;
+}
+
 .hero__eyebrow,
 .summary-card__eyebrow {
   letter-spacing: 0.18em;
@@ -79,6 +95,21 @@ body {
 
 .feed-panel {
   overflow: hidden;
+}
+
+.footer-bar {
+  margin-top: 28px;
+  padding: 18px 24px;
+  border: 1px solid $panel-border;
+  box-shadow: $shadow-soft;
+}
+
+.footer-bar__tag {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #edf5ff;
+  color: #0b5fff;
+  font-weight: 700;
 }
 
 .alert-list__item {
