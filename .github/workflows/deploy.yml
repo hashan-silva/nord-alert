@@ -45,15 +45,14 @@ jobs:
         id: img
         shell: bash
         run: |
+          echo "ecr_tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
             {
               echo "dockerhub_tags<<EOF"
               echo "${IMAGE_REPO}:latest"
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
           elif [[ "${GITHUB_REF_NAME}" == v* ]]; then
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
             {
               echo "dockerhub_tags<<EOF"
               echo "${IMAGE_REPO}:${GITHUB_REF_NAME}"
@@ -80,7 +79,7 @@ jobs:
           ECR_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}"
           FUNCTION_NAME="nord-alert-${{ steps.ws.outputs.name }}-backend"
           if [ "${{ steps.backend_changed.outputs.changed }}" = "true" ]; then
-            LAMBDA_IMAGE_URI="${ECR_IMAGE}:${{ steps.img.outputs.tag }}"
+            LAMBDA_IMAGE_URI="${ECR_IMAGE}:${{ steps.img.outputs.ecr_tag }}"
           else
             LAMBDA_IMAGE_URI=$(aws lambda get-function \
               --function-name "${FUNCTION_NAME}" \
@@ -119,7 +118,7 @@ jobs:
         working-directory: terraform
         env:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-        run: terraform apply -target=aws_ecr_repository.lambda -target=aws_ecr_lifecycle_policy.lambda -auto-approve
+        run: terraform apply -target=aws_ecr_lifecycle_policy.lambda -auto-approve
 
       - name: Set up Docker Buildx
         if: steps.backend_changed.outputs.changed == 'true'
@@ -158,7 +157,7 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ${{ steps.aws.outputs.ecr_image }}:${{ steps.img.outputs.tag }}
+            ${{ steps.aws.outputs.ecr_image }}:${{ steps.img.outputs.ecr_tag }}
           cache-to: type=gha,mode=max
 
       - name: Terraform Apply
