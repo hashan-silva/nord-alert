@@ -20,6 +20,8 @@ import se.nordalert.backend.services.AlertAggregationService;
 @WebMvcTest(AlertController.class)
 class AlertControllerTest {
 
+  private static final String STOCKHOLM_COUNTY = "Stockholms län";
+
   @Autowired
   private MockMvc mockMvc;
 
@@ -36,13 +38,13 @@ class AlertControllerTest {
   @Test
   void shouldFilterAlertsByCountyAndSeverity() throws Exception {
     when(alertAggregationService.fetchAllAlerts()).thenReturn(List.of(
-        alert("1", "Stockholms län", Severity.INFO, Instant.parse("2026-03-12T16:52:18Z")),
-        alert("2", "Stockholms län", Severity.HIGH, Instant.parse("2026-03-12T17:52:18Z")),
+        alert("1", STOCKHOLM_COUNTY, Severity.INFO, Instant.parse("2026-03-12T16:52:18Z")),
+        alert("2", STOCKHOLM_COUNTY, Severity.HIGH, Instant.parse("2026-03-12T17:52:18Z")),
         alert("3", "Skåne län", Severity.HIGH, Instant.parse("2026-03-12T18:52:18Z"))
     ));
 
     mockMvc.perform(get("/alerts")
-            .param("county", "Stockholms län")
+            .param("county", STOCKHOLM_COUNTY)
             .param("severity", "medium"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1))

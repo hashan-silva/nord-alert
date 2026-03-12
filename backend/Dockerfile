@@ -20,5 +20,5 @@ RUN yum install -y curl \
 USER appuser
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl --fail --silent http://127.0.0.1:${PORT}/health || exit 1
+  CMD curl --fail --silent "http://127.0.0.1:${PORT}/health" || exit 1
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

@@ -11,6 +11,7 @@ public class SmhiAdapter {
 
   private static final String SMHI_WARNINGS_URL =
       "https://opendata-download-warnings.smhi.se/ibww/api/version/1/warning.json";
+  private static final String EVENT_FIELD = "event";
 
   private final HttpJsonClient httpJsonClient;
 
@@ -27,9 +28,9 @@ public class SmhiAdapter {
     List<SmhiWarning> warnings = new ArrayList<>();
     for (JsonNode warning : data) {
       String eventType = firstText(
-          warning.path("event").path("en"),
-          warning.path("event").path("sv"),
-          warning.path("event").path("code")
+          warning.path(EVENT_FIELD).path("en"),
+          warning.path(EVENT_FIELD).path("sv"),
+          warning.path(EVENT_FIELD).path("code")
       );
 
       for (JsonNode area : warning.path("warningAreas")) {

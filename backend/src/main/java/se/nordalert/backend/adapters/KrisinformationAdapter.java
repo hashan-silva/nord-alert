@@ -11,6 +11,7 @@ public class KrisinformationAdapter {
 
   private static final String NEWS_ENDPOINT = "https://api.krisinformation.se/v3/news";
   private static final String VMAS_ENDPOINT = "https://api.krisinformation.se/v3/vmas";
+  private static final String PUSH_MESSAGE_FIELD = "pushMessage";
 
   private final HttpJsonClient httpJsonClient;
 
@@ -42,9 +43,9 @@ public class KrisinformationAdapter {
           collectCounties(item.path("counties")),
           firstInstant(item.path("published").asText(null), item.path("date").asText(null)),
           firstText(item.path("web"), item.path("url")),
-          item.path("pushMessage").isMissingNode() || item.path("pushMessage").isNull()
+          item.path(PUSH_MESSAGE_FIELD).isMissingNode() || item.path(PUSH_MESSAGE_FIELD).isNull()
               ? null
-              : item.path("pushMessage").asText("")
+              : item.path(PUSH_MESSAGE_FIELD).asText("")
       ));
     }
     return normalized;
