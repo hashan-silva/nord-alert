@@ -7,6 +7,7 @@ NordAlert is a web dashboard and backend platform that aggregates official alert
 [![CodeQL](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql)
 [![Terraform Lint & Validate](https://github.com/hashan-silva/nord-alert/actions/workflows/terraform-ci.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/terraform-ci.yml)
 [![Trivy IaC Scan](https://github.com/hashan-silva/nord-alert/actions/workflows/tfsec.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/tfsec.yml)
+[![Publish Docker Hub Images](https://github.com/hashan-silva/nord-alert/actions/workflows/dockerhub.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/dockerhub.yml)
 [![Web CI](https://github.com/hashan-silva/nord-alert/actions/workflows/web-ci.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/web-ci.yml)
 
 ## Features
@@ -83,6 +84,20 @@ The dashboard expects alert items shaped like:
 { "id": "1", "source": "POLISEN", "headline": "...", "description": "...", "areas": ["Stockholms län"], "severity": "high", "publishedAt": "2026-03-12T16:52:18Z", "url": "https://example.com" }
 ```
 
+### Docker Compose
+
+You can run the backend and web dashboard together locally with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+- backend on `http://localhost:8080`
+- web dashboard on `http://localhost:3000`
+
+The compose setup builds the web app with `REACT_APP_BACKEND_BASE_URL=http://localhost:8080` so the browser can call the backend through the host-mapped port.
+
 ### Data Sources
 
 The backend retrieves information from a number of official Swedish services:
@@ -99,7 +114,7 @@ GitHub Actions builds the backend Docker image, pushes it to Docker Hub and Amaz
 
 - Workflows: Deploy (`deploy.yml`), Sonar (`build.yml`), Terraform lint/validate, tfsec (SARIF → Code Scanning), and Web CI for `web/`.
 - Terraform: provisions the Lambda backend, API Gateway HTTP API, S3 frontend bucket, and CloudFront distribution.
-- Docker: builds a standard Java 17 web image for Docker Hub from `backend/Dockerfile` and a Lambda-compatible image for ECR from `backend/Dockerfile.lambda`.
+- Docker: builds a standard Java 17 backend image from `backend/Dockerfile`, a Lambda-compatible image for ECR from `backend/Dockerfile.lambda`, and a web image from `web/Dockerfile`.
 - Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `TF_API_TOKEN`.
 - Default AWS region is Stockholm (`eu-north-1`). Set `AWS_REGION` in GitHub Secrets only if you want to override that default in CI.
 - Recommendation: use a remote Terraform backend to persist state across runs for reliable, incremental applies.
