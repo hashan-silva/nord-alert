@@ -13,6 +13,7 @@
 backend/node_modules/
 backend/package-lock.json
 backend/dist/
+backend/target/
 
 
 
@@ -135,3 +136,4 @@ package-lock.json
 *.tfstate.backup
 crash.log
 *.lock.hcl
+/.idea/

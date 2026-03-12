@@ -29,14 +29,12 @@ This project is built with a modern, production-ready tech stack:
   - **Push Notifications:** `firebase_core`, `firebase_messaging`, `flutter_local_notifications`
   - **Utilities:** `intl`, `url_launcher`
 
-- **Backend (Node.js on Google Cloud):**
-  - **Runtime:** Node.js 20 with TypeScript
-  - **Platform:** Google Cloud Functions or Cloud Run
-  - **Framework:** Fastify (if using Cloud Run)
-  - **API Client:** `undici`
-  - **Validation:** `zod`
-  - **Scheduling:** Native cron jobs or Google Cloud Scheduler
-  - **Firebase:** `firebase-admin`
+- **Backend (Java on OCI):**
+  - **Runtime:** Amazon Corretto 17
+  - **Framework:** Spring Boot 3
+  - **Build:** Maven
+  - **HTTP Client:** Java `HttpClient`
+  - **Serialization:** Jackson
 
 - **Database:**
   - **Store:** Firestore for storing normalized alerts and managing deduplication.
@@ -49,7 +47,7 @@ This project is built with a modern, production-ready tech stack:
 This repository is a monorepo containing the mobile app and the backend server.
 
 - **/mobile/**: Contains the Flutter mobile application.
-- **/backend/**: Contains the Node.js/TypeScript backend services.
+- **/backend/**: Contains the Java 17 backend service.
 - **/docs/**: Contains project documentation.
 
 ## Development
@@ -58,8 +56,7 @@ This repository is a monorepo containing the mobile app and the backend server.
 
 ```bash
 cd backend
-npm install
-npm run start
+mvn spring-boot:run
 ```
 
 The API exposes a `/alerts` endpoint which accepts optional `county` and `severity` query parameters for filtering.
@@ -97,6 +94,6 @@ GitHub Actions builds and pushes the backend Docker image (tagged with commit SH
 
 - Workflows: Deploy (`deploy.yml`), Sonar (`build.yml`), Terraform lint/validate, tfsec (SARIF → Code Scanning), and Flutter CI for `mobile/`.
 - Terraform: provisions VCN, subnet, IGW/route, NSG, and a VM; cloud‑init installs Docker and runs the container mapping port 80 → 3000.
-- Docker: runs as non‑root `node` user and exposes `/health` for container health checks.
+- Docker: builds the Spring Boot jar with Maven on Amazon Corretto 17 and exposes `/health`.
 - Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_PRIVATE_KEY`, `OCI_REGION`, `OCI_COMPARTMENT_OCID`, `SSH_PUBLIC_KEY`.
 - Recommendation: use a remote Terraform backend to persist state across runs for reliable, incremental applies.
