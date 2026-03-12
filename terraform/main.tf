@@ -8,11 +8,12 @@ terraform {
     }
   }
 
-  cloud {
+  backend "remote" {
+    hostname     = "app.terraform.io"
     organization = "hashan-silva"
 
     workspaces {
-      name = "nord-alert-main"
+      prefix = "nord-alert-"
     }
   }
 }
