@@ -113,7 +113,7 @@ jobs:
         working-directory: terraform
         env:
           TF_WORKSPACE: ${{ steps.ws.outputs.name }}
-        run: terraform init -input=false -reconfigure
+        run: terraform init -input=false
 
       - name: Ensure ECR repository exists
         working-directory: terraform
