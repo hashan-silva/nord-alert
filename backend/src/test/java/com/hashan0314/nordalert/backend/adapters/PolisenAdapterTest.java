@@ -52,6 +52,7 @@ class PolisenAdapterTest {
     assertEquals("627250", events.get(0).id());
     assertEquals(Instant.parse("2026-03-12T16:52:18Z"), events.get(0).occurredAt());
     assertEquals(58.252793, events.get(0).location().lat());
+    assertEquals("https://polisen.se/aktuellt/handelser/2026/mars/12/brand-goteborg/", events.get(0).url());
   }
 
   @Test
@@ -74,5 +75,26 @@ class PolisenAdapterTest {
     assertEquals("legacy-id", event.id());
     assertNull(event.location().lat());
     assertNull(event.location().lon());
+    assertEquals("https://polisen.se/aktuellt/handelser/legacy-id", event.url());
+  }
+
+  @Test
+  void shouldKeepAbsolutePolisenUrl() throws Exception {
+    when(httpJsonClient.getJson("https://polisen.se/api/events")).thenReturn(objectMapper.readTree("""
+        [
+          {
+            "id": "627250",
+            "datetime": "2026-03-12T16:52:18Z",
+            "url": "https://polisen.se/aktuellt/handelser/2026/mars/12/brand-goteborg/",
+            "location": {
+              "name": "Stockholms lan"
+            }
+          }
+        ]
+        """));
+
+    PolisenAdapter.PolisenEvent event = polisenAdapter.fetchPolisenEvents().get(0);
+
+    assertEquals("https://polisen.se/aktuellt/handelser/2026/mars/12/brand-goteborg/", event.url());
   }
 }

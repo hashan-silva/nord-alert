@@ -21,6 +21,7 @@ import com.hashan0314.nordalert.backend.services.AlertAggregationService;
 class AlertControllerTest {
 
   private static final String STOCKHOLM_COUNTY = "Stockholms län";
+  private static final String SKANE_COUNTY = "Skåne län";
 
   @Autowired
   private MockMvc mockMvc;
@@ -40,7 +41,7 @@ class AlertControllerTest {
     when(alertAggregationService.fetchAllAlerts()).thenReturn(List.of(
         alert("1", STOCKHOLM_COUNTY, Severity.INFO, Instant.parse("2026-03-12T16:52:18Z")),
         alert("2", STOCKHOLM_COUNTY, Severity.HIGH, Instant.parse("2026-03-12T17:52:18Z")),
-        alert("3", "Skåne län", Severity.HIGH, Instant.parse("2026-03-12T18:52:18Z"))
+        alert("3", SKANE_COUNTY, Severity.HIGH, Instant.parse("2026-03-12T18:52:18Z"))
     ));
 
     mockMvc.perform(get("/alerts")
@@ -50,6 +51,20 @@ class AlertControllerTest {
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(jsonPath("$[0].id").value("2"))
         .andExpect(jsonPath("$[0].severity").value("high"));
+  }
+
+  @Test
+  void shouldFilterAlertsByMultipleCounties() throws Exception {
+    when(alertAggregationService.fetchAllAlerts()).thenReturn(List.of(
+        alert("1", STOCKHOLM_COUNTY, Severity.INFO, Instant.parse("2026-03-12T16:52:18Z")),
+        alert("2", SKANE_COUNTY, Severity.HIGH, Instant.parse("2026-03-12T17:52:18Z")),
+        alert("3", "Västra Götalands län", Severity.HIGH, Instant.parse("2026-03-12T18:52:18Z"))
+    ));
+
+    mockMvc.perform(get("/alerts")
+            .param("county", STOCKHOLM_COUNTY, SKANE_COUNTY))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2));
   }
 
   @Test

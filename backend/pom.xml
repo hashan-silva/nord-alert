@@ -12,7 +12,7 @@
 
   <groupId>se.nordalert</groupId>
   <artifactId>backend</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.2</version>
   <name>nord-alert-backend</name>
   <description>Backend services for NordAlert</description>
 

@@ -12,7 +12,7 @@ RUN mvn -q -DskipTests package
 FROM amazoncorretto:17
 WORKDIR /app
 ENV PORT=8080
-COPY --from=build /app/target/backend-1.0.0.jar ./app.jar
+COPY --from=build /app/target/backend-*.jar ./app.jar
 RUN yum install -y curl shadow-utils \
   && yum clean all \
   && useradd --system --create-home --uid 10001 appuser \

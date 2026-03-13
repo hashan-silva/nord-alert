@@ -13,7 +13,7 @@ export interface AlertItem {
 }
 
 interface FetchAlertsParams {
-  county: string;
+  counties: string[];
   severity: string;
 }
 
@@ -24,12 +24,10 @@ export const baseUrl =
     ? configuredBaseUrl.replace(/\/$/, '')
     : 'http://localhost:8080';
 
-export async function fetchAlerts({ county, severity }: FetchAlertsParams): Promise<AlertItem[]> {
+export async function fetchAlerts({ counties, severity }: FetchAlertsParams): Promise<AlertItem[]> {
   const url = new URL(`${baseUrl}/alerts`);
 
-  if (county) {
-    url.searchParams.set('county', county);
-  }
+  counties.forEach((county) => url.searchParams.append('county', county));
 
   if (severity) {
     url.searchParams.set('severity', severity);

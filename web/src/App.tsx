@@ -15,6 +15,7 @@ import {
   Stack,
   Typography
 } from '@mui/material';
+import { type SelectChangeEvent } from '@mui/material/Select';
 import AlertList from './components/AlertList';
 import SummaryCard from './components/SummaryCard';
 import { type AlertItem, baseUrl, fetchAlerts } from './lib/api';
@@ -28,7 +29,7 @@ const severityOptions = [
 
 function App() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [county, setCounty] = useState('');
+  const [selectedCounties, setSelectedCounties] = useState<string[]>([]);
   const [severity, setSeverity] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,7 +42,7 @@ function App() {
       setError('');
 
       try {
-        const nextAlerts = await fetchAlerts({ county, severity });
+        const nextAlerts = await fetchAlerts({ counties: selectedCounties, severity });
         if (!cancelled) {
           setAlerts(nextAlerts);
         }
@@ -61,14 +62,14 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [county, severity]);
+  }, [selectedCounties, severity]);
 
   const counties = useMemo(() => {
     const options = new Set<string>();
     alerts.forEach((alert) => {
       alert.areas?.forEach((area) => options.add(area));
     });
-    return ['', ...Array.from(options).sort((left, right) => left.localeCompare(right))];
+    return Array.from(options).sort((left, right) => left.localeCompare(right));
   }, [alerts]);
 
   const sourceCounts = useMemo<Record<string, number>>(() => {
@@ -77,6 +78,11 @@ function App() {
       return counts;
     }, {});
   }, [alerts]);
+
+  function handleCountyChange(event: SelectChangeEvent<string[]>) {
+    const value = event.target.value;
+    setSelectedCounties(typeof value === 'string' ? value.split(',') : value);
+  }
 
   return (
     <Box className="dashboard-shell">
@@ -139,21 +145,28 @@ function App() {
                 <Box>
                   <Typography variant="h3">Filters</Typography>
                   <Typography color="text.secondary">
-                    Narrow the feed by county and severity threshold.
+                    Narrow the feed by counties and severity threshold.
                   </Typography>
                 </Box>
 
                 <FormControl fullWidth>
-                  <InputLabel id="county-select-label">County</InputLabel>
+                  <InputLabel id="county-select-label" shrink>
+                    Counties
+                  </InputLabel>
                   <Select
                     labelId="county-select-label"
-                    label="County"
-                    value={county}
-                    onChange={(event) => setCounty(event.target.value)}
+                    multiple
+                    displayEmpty
+                    label="Counties"
+                    value={selectedCounties}
+                    onChange={handleCountyChange}
+                    renderValue={(selected) =>
+                      selected.length === 0 ? 'All counties' : selected.join(', ')
+                    }
                   >
                     {counties.map((option) => (
-                      <MenuItem key={option || 'all'} value={option}>
-                        {option || 'All counties'}
+                      <MenuItem key={option} value={option}>
+                        {option}
                       </MenuItem>
                     ))}
                   </Select>
@@ -179,7 +192,7 @@ function App() {
                   variant="outlined"
                   startIcon={<SyncRoundedIcon />}
                   onClick={() => {
-                    setCounty('');
+                    setSelectedCounties([]);
                     setSeverity('');
                   }}
                 >
@@ -219,6 +232,12 @@ function App() {
             </Paper>
           </Grid>
         </Grid>
+
+        <Box className="app-footer">
+          <Typography color="text.secondary" variant="body2">
+            NordAlert © Shermal Hashan Silva
+          </Typography>
+        </Box>
       </Container>
     </Box>
   );

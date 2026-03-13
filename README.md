@@ -13,7 +13,7 @@ NordAlert is a web dashboard and backend platform that aggregates official alert
 ## Features
 
 - View a real-time dashboard of alerts from multiple official sources.
-- Filter alerts by county and severity threshold.
+- Filter alerts by one or more counties and severity threshold.
 - Monitor source volumes across Polisen, SMHI, and Krisinformation.
 - Publish the web frontend globally through S3 and CloudFront.
 
@@ -57,7 +57,7 @@ cd backend
 mvn spring-boot:run
 ```
 
-The API exposes a `/alerts` endpoint which accepts optional `county` and `severity` query parameters for filtering.
+The API exposes a `/alerts` endpoint which accepts optional repeated `county` parameters and a `severity` query parameter for filtering.
 OpenAPI docs are available at `/v3/api-docs`, and Swagger UI is available at `/swagger-ui/index.html` during normal web execution.
 
 ### Web Dashboard

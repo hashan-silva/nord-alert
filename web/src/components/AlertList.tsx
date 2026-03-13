@@ -31,7 +31,7 @@ function AlertList({ alerts }: AlertListProps) {
         <WarningAmberRoundedIcon color="disabled" />
         <Typography variant="h6">No alerts match the current filters.</Typography>
         <Typography color="text.secondary">
-          Try another county or lower the severity threshold.
+          Try a different county selection or lower the severity threshold.
         </Typography>
       </Box>
     );
