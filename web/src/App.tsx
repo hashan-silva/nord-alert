@@ -21,9 +21,10 @@ import {
   TextField,
   Typography
 } from '@mui/material';
+import { type SelectChangeEvent } from '@mui/material/Select';
 import AlertList from './components/AlertList';
 import SummaryCard from './components/SummaryCard';
-import { type AlertItem, baseUrl, fetchAlerts } from './lib/api';
+import { type AlertItem, type CountyItem, baseUrl, fetchAlerts, fetchCounties } from './lib/api';
 
 const webVersion = process.env.REACT_APP_WEB_VERSION || 'unknown';
 const backendVersion = process.env.REACT_APP_BACKEND_VERSION || 'unknown';
@@ -43,30 +44,32 @@ const sourceLabels: Record<string, string> = {
 
 function App() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [county, setCounty] = useState('');
+  const [countyOptions, setCountyOptions] = useState<CountyItem[]>([]);
+  const [selectedCounties, setSelectedCounties] = useState<string[]>([]);
   const [severity, setSeverity] = useState('');
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [alertError, setAlertError] = useState('');
+  const [countyError, setCountyError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadAlerts() {
       setLoading(true);
-      setError('');
+      setAlertError('');
 
       try {
-        const nextAlerts = await fetchAlerts({ county, severity });
+        const nextAlerts = await fetchAlerts({ counties: selectedCounties, severity });
         if (!cancelled) {
           setAlerts(nextAlerts);
         }
       } catch (nextError) {
         if (!cancelled) {
-          setError(nextError instanceof Error ? nextError.message : 'Unable to load alerts');
+          setAlertError(nextError instanceof Error ? nextError.message : 'Unable to load alerts');
         }
       } finally {
         if (!cancelled) {
@@ -80,15 +83,30 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [county, severity]);
+  }, [selectedCounties, severity]);
 
-  const counties = useMemo(() => {
-    const options = new Set<string>();
-    alerts.forEach((alert) => {
-      alert.areas?.forEach((area) => options.add(area));
-    });
-    return ['', ...Array.from(options).sort((left, right) => left.localeCompare(right))];
-  }, [alerts]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCounties() {
+      try {
+        const nextCounties = await fetchCounties();
+        if (!cancelled) {
+          setCountyOptions(nextCounties);
+        }
+      } catch (nextError) {
+        if (!cancelled) {
+          setCountyError(nextError instanceof Error ? nextError.message : 'Unable to load counties');
+        }
+      }
+    }
+
+    loadCounties();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const resourceOptions = useMemo(() => {
     return Array.from(new Set(alerts.map((alert) => alert.source))).sort((left, right) =>
@@ -131,13 +149,20 @@ function App() {
 
   useEffect(() => {
     setPage(1);
-  }, [alerts, county, severity, selectedResources, dateFrom, dateTo]);
+  }, [alerts, selectedCounties, severity, selectedResources, dateFrom, dateTo]);
 
   useEffect(() => {
     if (page > pageCount) {
       setPage(pageCount);
     }
   }, [page, pageCount]);
+
+  function handleCountyChange(event: SelectChangeEvent<string[]>) {
+    const value = event.target.value;
+    setSelectedCounties(typeof value === 'string' ? value.split(',') : value);
+  }
+
+  const error = countyError || alertError;
 
   return (
     <Box className="dashboard-shell">
@@ -208,7 +233,7 @@ function App() {
                 <Box>
                   <Typography variant="h3">Filters</Typography>
                   <Typography color="text.secondary">
-                    Narrow the feed by county and severity threshold.
+                    Narrow the feed by counties and severity threshold.
                   </Typography>
                 </Box>
 
@@ -241,16 +266,21 @@ function App() {
                 </FormControl>
 
                 <FormControl fullWidth>
-                  <InputLabel id="county-select-label">County</InputLabel>
+                  <InputLabel id="county-select-label">Counties</InputLabel>
                   <Select
                     labelId="county-select-label"
-                    label="County"
-                    value={county}
-                    onChange={(event) => setCounty(event.target.value)}
+                    multiple
+                    input={<OutlinedInput label="Counties" />}
+                    value={selectedCounties}
+                    onChange={handleCountyChange}
+                    renderValue={(selected) =>
+                      selected.length === 0 ? 'All counties' : selected.join(', ')
+                    }
                   >
-                    {counties.map((option) => (
-                      <MenuItem key={option || 'all'} value={option}>
-                        {option || 'All counties'}
+                    {countyOptions.map((option) => (
+                      <MenuItem key={option.code} value={option.name}>
+                        <Checkbox checked={selectedCounties.includes(option.name)} />
+                        <ListItemText primary={option.name} />
                       </MenuItem>
                     ))}
                   </Select>
@@ -296,7 +326,7 @@ function App() {
                   variant="outlined"
                   startIcon={<SyncRoundedIcon />}
                   onClick={() => {
-                    setCounty('');
+                    setSelectedCounties([]);
                     setSeverity('');
                     setSelectedResources([]);
                     setDateFrom('');
@@ -353,25 +383,11 @@ function App() {
           </Grid>
         </Grid>
 
-        <Paper className="footer-bar" elevation={0}>
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            justifyContent="space-between"
-            spacing={2}
-          >
-            <Typography color="text.secondary" variant="body2">
-              NordAlert monitoring surface for backend alert aggregation and web operations.
-            </Typography>
-            <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-              <Typography className="footer-bar__tag" variant="body2">
-                Web v{webVersion}
-              </Typography>
-              <Typography className="footer-bar__tag" variant="body2">
-                Backend v{backendVersion}
-              </Typography>
-            </Stack>
-          </Stack>
-        </Paper>
+        <Box className="app-footer">
+          <Typography color="text.secondary" variant="body2">
+            NordAlert © Shermal Hashan Silva · Web {webVersion} · Backend {backendVersion}
+          </Typography>
+        </Box>
       </Container>
     </Box>
   );

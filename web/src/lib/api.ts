@@ -12,8 +12,13 @@ export interface AlertItem {
   url?: string;
 }
 
+export interface CountyItem {
+  code: string;
+  name: string;
+}
+
 interface FetchAlertsParams {
-  county: string;
+  counties: string[];
   severity: string;
 }
 
@@ -24,12 +29,10 @@ export const baseUrl =
     ? configuredBaseUrl.replace(/\/$/, '')
     : 'http://localhost:8080';
 
-export async function fetchAlerts({ county, severity }: FetchAlertsParams): Promise<AlertItem[]> {
+export async function fetchAlerts({ counties, severity }: FetchAlertsParams): Promise<AlertItem[]> {
   const url = new URL(`${baseUrl}/alerts`);
 
-  if (county) {
-    url.searchParams.set('county', county);
-  }
+  counties.forEach((county) => url.searchParams.append('county', county));
 
   if (severity) {
     url.searchParams.set('severity', severity);
@@ -42,4 +45,14 @@ export async function fetchAlerts({ county, severity }: FetchAlertsParams): Prom
   }
 
   return response.json() as Promise<AlertItem[]>;
+}
+
+export async function fetchCounties(): Promise<CountyItem[]> {
+  const response = await fetch(`${baseUrl}/counties`);
+
+  if (!response.ok) {
+    throw new Error(`Counties request failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<CountyItem[]>;
 }

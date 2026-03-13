@@ -13,7 +13,7 @@ RUN cp target/*.jar /tmp/app.jar
 FROM amazoncorretto:17
 WORKDIR /app
 ENV PORT=8080
-COPY --from=build /tmp/app.jar ./app.jar
+COPY --from=build /app/target/backend-*.jar ./app.jar
 RUN yum install -y curl shadow-utils \
   && yum clean all \
   && useradd --system --create-home --uid 10001 appuser \

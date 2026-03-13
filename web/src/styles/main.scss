@@ -114,6 +114,13 @@ body {
   font-weight: 700;
 }
 
+.app-footer {
+  display: flex;
+  justify-content: center;
+  padding: 28px 0 8px;
+  text-align: center;
+}
+
 .alert-list__item {
   padding: 20px 0;
 }

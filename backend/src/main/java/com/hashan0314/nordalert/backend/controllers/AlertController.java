@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -57,16 +58,29 @@ public class AlertController {
       }
   )
   public List<Alert> alerts(
-      @Parameter(description = "Exact county name filter", example = "Stockholms län")
-      @RequestParam(required = false) String county,
+      @Parameter(description = "Exact county name filters", example = "Stockholms län")
+      @RequestParam(required = false) List<String> county,
       @Parameter(description = "Minimum severity threshold", example = "medium")
       @RequestParam(required = false) String severity
   ) {
+    List<String> counties = normalizeCounties(county);
     Severity threshold = parseSeverity(severity);
 
     return alertAggregationService.fetchAllAlerts().stream()
-        .filter(alert -> county == null || alert.areas().contains(county))
+        .filter(alert -> counties.isEmpty() || alert.areas().stream().anyMatch(counties::contains))
         .filter(alert -> threshold == null || alert.severity().rank() >= threshold.rank())
+        .toList();
+  }
+
+  private static List<String> normalizeCounties(List<String> counties) {
+    if (counties == null) {
+      return List.of();
+    }
+
+    return counties.stream()
+        .filter(Objects::nonNull)
+        .map(String::trim)
+        .filter(value -> !value.isEmpty())
         .toList();
   }
 

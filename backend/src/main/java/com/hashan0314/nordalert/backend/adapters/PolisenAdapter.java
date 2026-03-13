@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PolisenAdapter {
 
+  private static final String POLISEN_BASE_URL = "https://polisen.se";
   private static final String POLISEN_EVENTS_URL = "https://polisen.se/api/events";
 
   private final HttpJsonClient httpJsonClient;
@@ -25,16 +26,17 @@ public class PolisenAdapter {
 
     List<PolisenEvent> results = new ArrayList<>();
     for (JsonNode event : events) {
+      String eventId = text(event.path("id"), text(event.path("eventid")));
       String[] coordinates = parseGps(text(event.path("location").path("gps"))).split(",");
       Double latitude = parseCoordinate(coordinates, 0);
       Double longitude = parseCoordinate(coordinates, 1);
 
       results.add(new PolisenEvent(
-          text(event.path("id"), text(event.path("eventid"))),
+          eventId,
           text(event.path("name")),
           text(event.path("type")),
           text(event.path("summary")),
-          text(event.path("url"), "https://polisen.se/aktuellt/handelser/" + text(event.path("id"))),
+          normalizeUrl(text(event.path("url")), eventId),
           DateParser.parse(text(event.path("datetime"))),
           new Location(
               text(event.path("location").path("name")),
@@ -52,6 +54,18 @@ public class PolisenAdapter {
 
   private static String text(JsonNode node, String fallback) {
     return node.isMissingNode() || node.isNull() ? fallback : node.asText(fallback);
+  }
+
+  private static String normalizeUrl(String url, String id) {
+    if (url == null || url.isBlank()) {
+      return POLISEN_BASE_URL + "/aktuellt/handelser/" + id;
+    }
+
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+
+    return url.startsWith("/") ? POLISEN_BASE_URL + url : POLISEN_BASE_URL + "/" + url;
   }
 
   private static String parseGps(String gps) {
