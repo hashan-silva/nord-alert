@@ -255,13 +255,19 @@ function App() {
                     renderValue={(selected) =>
                       selected.length === 0
                         ? 'All resources'
-                        : selected.map((value) => sourceLabels[value] || value).join(', ')
+                        : selected
+                            .map(
+                              (value) => resourceLabels[normalizeResourceKey(value)] || value
+                            )
+                            .join(', ')
                     }
                   >
                     {resourceOptions.map((option) => (
                       <MenuItem key={option} value={option}>
                         <Checkbox checked={selectedResources.includes(option)} />
-                        <ListItemText primary={sourceLabels[option] || option} />
+                        <ListItemText
+                          primary={resourceLabels[normalizeResourceKey(option)] || option}
+                        />
                       </MenuItem>
                     ))}
                   </Select>
