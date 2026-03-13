@@ -9,9 +9,10 @@ on:
     paths:
       - 'backend/**'
       - 'web/**'
+      - 'terraform/**'
       - '.github/workflows/dockerhub.yml'
       - 'backend/Dockerfile'
-      - 'backend/Dockerfile.lambda'
+      - 'web/Dockerfile'
 
 concurrency:
   group: dockerhub-${{ github.ref_name }}
@@ -31,13 +32,13 @@ jobs:
         id: changes
         shell: bash
         run: |
-          if git diff --quiet "$BASE" "$HEAD" -- backend; then
+          if git diff --quiet "$BASE" "$HEAD" -- backend terraform; then
             echo "backend_changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "backend_changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-          if git diff --quiet "$BASE" "$HEAD" -- web; then
+          if git diff --quiet "$BASE" "$HEAD" -- web terraform; then
             echo "web_changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "web_changed=true" >> "$GITHUB_OUTPUT"
@@ -88,6 +89,17 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve backend version
+        id: backend_version
+        shell: bash
+        run: |
+          VERSION=$(sed -n '/<artifactId>backend<\/artifactId>/{n;s/.*<version>\(.*\)<\/version>.*/\1/p;}' backend/pom.xml)
+          if [ -z "$VERSION" ]; then
+            echo "Unable to resolve backend version from backend/pom.xml" >&2
+            exit 1
+          fi
+          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push backend image
         if: steps.changes.outputs.backend_changed == 'true'
         uses: docker/build-push-action@v5
@@ -98,6 +110,7 @@ jobs:
           push: true
           provenance: false
           tags: ${{ steps.tags.outputs.backend_tags }}
+          cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Build and push web image
@@ -111,5 +124,7 @@ jobs:
           provenance: false
           build-args: |
             REACT_APP_BACKEND_BASE_URL=${{ env.WEB_BACKEND_BASE_URL }}
+            REACT_APP_BACKEND_VERSION=${{ steps.backend_version.outputs.value }}
           tags: ${{ steps.tags.outputs.web_tags }}
+          cache-from: type=gha
           cache-to: type=gha,mode=max

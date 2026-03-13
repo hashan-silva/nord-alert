@@ -8,6 +8,7 @@ RUN mvn -q test
 
 FROM base AS build
 RUN mvn -q -DskipTests package
+RUN cp target/*.jar /tmp/app.jar
 
 FROM amazoncorretto:17
 WORKDIR /app

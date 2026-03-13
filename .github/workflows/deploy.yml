@@ -31,7 +31,20 @@ jobs:
         id: backend_changed
         shell: bash
         run: |
-          if git diff --quiet "$BASE" "$HEAD" -- backend; then
+          if git diff --quiet "$BASE" "$HEAD" -- backend terraform; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          BASE: ${{ github.event.before }}
+          HEAD: ${{ github.sha }}
+
+      - name: Detect frontend changes
+        id: frontend_changed
+        shell: bash
+        run: |
+          if git diff --quiet "$BASE" "$HEAD" -- web terraform; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -139,24 +152,29 @@ jobs:
           echo "web_distribution_domain_name=$(terraform output -raw web_distribution_domain_name)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
+        if: steps.frontend_changed.outputs.changed == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Install web dependencies
+        if: steps.frontend_changed.outputs.changed == 'true'
         working-directory: web
         run: npm install
 
       - name: Build web dashboard
+        if: steps.frontend_changed.outputs.changed == 'true'
         working-directory: web
         env:
           REACT_APP_BACKEND_BASE_URL: ${{ steps.tf_outputs.outputs.api_url }}
         run: npm run build
 
       - name: Upload web dashboard to S3
+        if: steps.frontend_changed.outputs.changed == 'true'
         run: aws s3 sync web/dist "s3://${{ steps.tf_outputs.outputs.web_bucket_name }}" --delete
 
       - name: Disable cache for index.html
+        if: steps.frontend_changed.outputs.changed == 'true'
         run: |
           aws s3 cp web/dist/index.html \
             "s3://${{ steps.tf_outputs.outputs.web_bucket_name }}/index.html" \
@@ -164,6 +182,7 @@ jobs:
             --content-type "text/html"
 
       - name: Invalidate CloudFront cache
+        if: steps.frontend_changed.outputs.changed == 'true'
         run: |
           aws cloudfront create-invalidation \
             --distribution-id "${{ steps.tf_outputs.outputs.web_distribution_id }}" \

@@ -5,14 +5,20 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Container,
+  FormLabel,
   FormControl,
   Grid,
   InputLabel,
+  ListItemText,
   MenuItem,
+  OutlinedInput,
+  Pagination,
   Paper,
   Select,
   Stack,
+  TextField,
   Typography
 } from '@mui/material';
 import { type SelectChangeEvent } from '@mui/material/Select';
@@ -20,17 +26,30 @@ import AlertList from './components/AlertList';
 import SummaryCard from './components/SummaryCard';
 import { type AlertItem, baseUrl, fetchAlerts } from './lib/api';
 
+const webVersion = process.env.REACT_APP_WEB_VERSION || 'unknown';
+const backendVersion = process.env.REACT_APP_BACKEND_VERSION || 'unknown';
+
 const severityOptions = [
   { label: 'All severities', value: '' },
   { label: 'Info and above', value: 'info' },
   { label: 'Medium and above', value: 'medium' },
   { label: 'High only', value: 'high' }
 ];
+const alertsPerPage = 6;
+const sourceLabels: Record<string, string> = {
+  krisinformation: 'Krisinformation',
+  polisen: 'Polisen',
+  smhi: 'SMHI'
+};
 
 function App() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [selectedCounties, setSelectedCounties] = useState<string[]>([]);
   const [severity, setSeverity] = useState('');
+  const [selectedResources, setSelectedResources] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -72,12 +91,54 @@ function App() {
     return Array.from(options).sort((left, right) => left.localeCompare(right));
   }, [alerts]);
 
+  const resourceOptions = useMemo(() => {
+    return Array.from(new Set(alerts.map((alert) => alert.source))).sort((left, right) =>
+      left.localeCompare(right)
+    );
+  }, [alerts]);
+
+  const filteredAlerts = useMemo(() => {
+    return alerts.filter((alert) => {
+      const matchesResource =
+        selectedResources.length === 0 || selectedResources.includes(alert.source);
+
+      const publishedAt = alert.publishedAt ? new Date(alert.publishedAt) : null;
+      const matchesFrom =
+        !dateFrom || (publishedAt !== null && publishedAt >= new Date(`${dateFrom}T00:00:00`));
+      const matchesTo =
+        !dateTo || (publishedAt !== null && publishedAt < new Date(`${dateTo}T23:59:59.999`));
+
+      return matchesResource && matchesFrom && matchesTo;
+    });
+  }, [alerts, dateFrom, dateTo, selectedResources]);
+
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(filteredAlerts.length / alertsPerPage)),
+    [filteredAlerts.length]
+  );
+
+  const paginatedAlerts = useMemo(() => {
+    const startIndex = (page - 1) * alertsPerPage;
+    return filteredAlerts.slice(startIndex, startIndex + alertsPerPage);
+  }, [filteredAlerts, page]);
+
   const sourceCounts = useMemo<Record<string, number>>(() => {
-    return alerts.reduce<Record<string, number>>((counts, alert) => {
-      counts[alert.source] = (counts[alert.source] || 0) + 1;
+    return filteredAlerts.reduce<Record<string, number>>((counts, alert) => {
+      const sourceKey = alert.source.toLowerCase();
+      counts[sourceKey] = (counts[sourceKey] || 0) + 1;
       return counts;
     }, {});
-  }, [alerts]);
+  }, [filteredAlerts]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [alerts, county, severity, selectedResources, dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
 
   function handleCountyChange(event: SelectChangeEvent<string[]>) {
     const value = event.target.value;
@@ -95,10 +156,18 @@ function App() {
             alignItems={{ xs: 'flex-start', md: 'flex-end' }}
           >
             <Box>
+              <Box
+                component="img"
+                src="/logo.png"
+                alt="NordAlert logo"
+                className="brand-lockup__logo"
+              />
               <Typography className="hero__eyebrow" variant="overline">
-                NordAlert dashboard
+                Operational overview
               </Typography>
-              <Typography variant="h1">Swedish public alerts in one live command view.</Typography>
+              <Typography className="hero__title" variant="h1">
+                Swedish public alerts in one live command view.
+              </Typography>
               <Typography className="hero__copy" variant="body1">
                 Track official updates from Polisen, SMHI, and Krisinformation with a
                 browser-based dashboard tailored for operations and monitoring.
@@ -114,7 +183,7 @@ function App() {
             <Grid size={{ xs: 12, md: 4 }}>
               <SummaryCard
                 eyebrow="Active feed"
-                value={alerts.length}
+                value={filteredAlerts.length}
                 caption="alerts returned"
                 tone="default"
               />
@@ -122,7 +191,7 @@ function App() {
             <Grid size={{ xs: 12, md: 4 }}>
               <SummaryCard
                 eyebrow="Police"
-                value={sourceCounts.POLISEN ?? 0}
+                value={sourceCounts.polisen ?? 0}
                 caption="incidents"
                 tone="accent"
               />
@@ -130,7 +199,7 @@ function App() {
             <Grid size={{ xs: 12, md: 4 }}>
               <SummaryCard
                 eyebrow="Weather + crisis"
-                value={(sourceCounts.SMHI ?? 0) + (sourceCounts.KRISINFORMATION ?? 0)}
+                value={(sourceCounts.smhi ?? 0) + (sourceCounts.krisinformation ?? 0)}
                 caption="warnings"
                 tone="warning"
               />
@@ -148,6 +217,34 @@ function App() {
                     Narrow the feed by counties and severity threshold.
                   </Typography>
                 </Box>
+
+                <FormControl fullWidth>
+                  <InputLabel id="resource-select-label">Resources</InputLabel>
+                  <Select
+                    multiple
+                    labelId="resource-select-label"
+                    input={<OutlinedInput label="Resources" />}
+                    value={selectedResources}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setSelectedResources(
+                        typeof value === 'string' ? value.split(',') : value
+                      );
+                    }}
+                    renderValue={(selected) =>
+                      selected.length === 0
+                        ? 'All resources'
+                        : selected.map((value) => sourceLabels[value] || value).join(', ')
+                    }
+                  >
+                    {resourceOptions.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        <Checkbox checked={selectedResources.includes(option)} />
+                        <ListItemText primary={sourceLabels[option] || option} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
                 <FormControl fullWidth>
                   <InputLabel id="county-select-label" shrink>
@@ -188,12 +285,35 @@ function App() {
                   </Select>
                 </FormControl>
 
+                <Stack spacing={2}>
+                  <FormLabel>Date range</FormLabel>
+                  <TextField
+                    label="From"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(event) => setDateFrom(event.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                  />
+                  <TextField
+                    label="To"
+                    type="date"
+                    value={dateTo}
+                    onChange={(event) => setDateTo(event.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                  />
+                </Stack>
+
                 <Button
                   variant="outlined"
                   startIcon={<SyncRoundedIcon />}
                   onClick={() => {
                     setSelectedCounties([]);
                     setSeverity('');
+                    setSelectedResources([]);
+                    setDateFrom('');
+                    setDateTo('');
                   }}
                 >
                   Reset filters
@@ -217,7 +337,9 @@ function App() {
                     </Typography>
                   </Box>
                   <Typography color="text.secondary" variant="body2">
-                    {loading ? 'Refreshing feed...' : `${alerts.length} alerts loaded`}
+                    {loading
+                      ? 'Refreshing feed...'
+                      : `${filteredAlerts.length} alerts loaded, page ${page} of ${pageCount}`}
                   </Typography>
                 </Stack>
 
@@ -227,7 +349,18 @@ function App() {
                   </Alert>
                 )}
 
-                <AlertList alerts={alerts} />
+                <AlertList alerts={paginatedAlerts} />
+
+                {filteredAlerts.length > alertsPerPage && (
+                  <Stack alignItems="center" pt={1}>
+                    <Pagination
+                      color="primary"
+                      count={pageCount}
+                      page={page}
+                      onChange={(_, value) => setPage(value)}
+                    />
+                  </Stack>
+                )}
               </Stack>
             </Paper>
           </Grid>
