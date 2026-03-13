@@ -14,6 +14,7 @@ NordAlert is a web dashboard and backend platform that aggregates official alert
 
 - View a real-time dashboard of alerts from multiple official sources.
 - Filter alerts by one or more counties and severity threshold.
+- Subscribe by email for new alerts that match counties, sources, and severity.
 - Monitor source volumes across Polisen, SMHI, and Krisinformation.
 - Publish the web frontend globally through S3 and CloudFront.
 
@@ -58,6 +59,7 @@ mvn spring-boot:run
 ```
 
 The API exposes a `/alerts` endpoint which accepts optional repeated `county` parameters and a `severity` query parameter for filtering.
+It also exposes `/counties` for the official county reference list and `POST /subscriptions` for email alert subscriptions.
 OpenAPI docs are available at `/v3/api-docs`, and Swagger UI is available at `/swagger-ui/index.html` during normal web execution.
 
 ### Web Dashboard
@@ -113,8 +115,8 @@ The backend retrieves information from a number of official Swedish services:
 GitHub Actions builds the backend Docker image, pushes it to Docker Hub and Amazon ECR, deploys the backend to AWS Lambda plus API Gateway via Terraform, then builds and publishes the React dashboard to S3 behind CloudFront.
 
 - Workflows: Deploy (`deploy.yml`), Sonar (`build.yml`), Terraform lint/validate, tfsec (SARIF → Code Scanning), and Web CI for `web/`.
-- Terraform: provisions the Lambda backend, API Gateway HTTP API, S3 frontend bucket, and CloudFront distribution.
+- Terraform: provisions the Lambda backend, a scheduled Lambda dispatcher, API Gateway HTTP API, DynamoDB, SES sender identity, S3 frontend bucket, and CloudFront distribution.
 - Docker: builds a standard Java 17 backend image from `backend/Dockerfile`, a Lambda-compatible image for ECR from `backend/Dockerfile.lambda`, and a web image from `web/Dockerfile`.
-- Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `TF_API_TOKEN`.
+- Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `TF_API_TOKEN`, `SES_SENDER_EMAIL`.
 - Default AWS region is Stockholm (`eu-north-1`). Set `AWS_REGION` in GitHub Secrets only if you want to override that default in CI.
 - Recommendation: use a remote Terraform backend to persist state across runs for reliable, incremental applies.

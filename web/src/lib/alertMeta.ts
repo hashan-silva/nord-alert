@@ -4,6 +4,8 @@ export const resourceLabels: Record<string, string> = {
   smhi: 'SMHI'
 };
 
+export const resourceOptions = Object.keys(resourceLabels);
+
 export const resourceColors: Record<string, string> = {
   krisinformation: '#23715f',
   polisen: '#0a4f86',

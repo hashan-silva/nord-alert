@@ -1,5 +1,6 @@
 import type { AlertItem } from '../models/alert';
 import type { CountyItem } from '../models/county';
+import type { CreateSubscriptionRequest, SubscriptionItem } from '../models/subscription';
 
 interface FetchAlertsParams {
   counties: string[];
@@ -39,4 +40,22 @@ export async function fetchCounties(): Promise<CountyItem[]> {
   }
 
   return response.json() as Promise<CountyItem[]>;
+}
+
+export async function createSubscription(
+  request: CreateSubscriptionRequest
+): Promise<SubscriptionItem> {
+  const response = await fetch(`${baseUrl}/subscriptions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Subscription request failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<SubscriptionItem>;
 }

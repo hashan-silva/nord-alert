@@ -44,3 +44,14 @@ variable "lambda_architecture" {
   default     = "x86_64"
   description = "Lambda architecture to deploy"
 }
+
+variable "ses_sender_email" {
+  type        = string
+  description = "Verified SES sender email address used for alert subscriptions"
+}
+
+variable "subscription_dispatch_schedule_expression" {
+  type        = string
+  default     = "rate(15 minutes)"
+  description = "EventBridge schedule used to dispatch subscription emails"
+}

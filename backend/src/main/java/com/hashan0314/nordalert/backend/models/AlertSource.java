@@ -17,4 +17,13 @@ public enum AlertSource {
   public String value() {
     return value;
   }
+
+  public static AlertSource fromValue(String value) {
+    for (AlertSource source : values()) {
+      if (source.value.equalsIgnoreCase(value)) {
+        return source;
+      }
+    }
+    throw new IllegalArgumentException("Unsupported source: " + value);
+  }
 }

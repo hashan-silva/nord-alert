@@ -4,9 +4,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import com.hashan0314.nordalert.backend.config.PublicApiProperties;
+import com.hashan0314.nordalert.backend.config.SubscriptionProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties(PublicApiProperties.class)
+@EnableConfigurationProperties({PublicApiProperties.class, SubscriptionProperties.class})
 public class NordAlertApplication {
 
   public static void main(String[] args) {
