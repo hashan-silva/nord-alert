@@ -37,6 +37,10 @@ const severityChipSx: Record<string, object> = {
     color: '#15324b',
     backgroundColor: '#dbe7f2'
   },
+  low: {
+    color: '#1e4d3d',
+    backgroundColor: '#d9efe6'
+  },
   medium: {
     color: '#4e3900',
     backgroundColor: '#f1d88a'
@@ -58,6 +62,10 @@ function formatTimestamp(value?: string) {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(new Date(value));
+}
+
+function formatSeverity(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function AlertList({ alerts }: AlertListProps) {
@@ -92,7 +100,7 @@ function AlertList({ alerts }: AlertListProps) {
                       sx={resourceChipSx[alert.source] || resourceChipSx.polisen}
                     />
                     <Chip
-                      label={alert.severity}
+                      label={formatSeverity(alert.severity)}
                       size="small"
                       sx={
                         severityChipSx[alert.severity as keyof typeof severityChipSx] ||
