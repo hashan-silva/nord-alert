@@ -68,8 +68,43 @@ class SmhiAdapterTest {
     assertEquals(1, warnings.size());
     assertEquals("3049-9668", warnings.get(0).id());
     assertEquals(SmhiAdapter.WarningLevel.RED, warnings.get(0).level());
-    assertEquals(List.of("The Belts"), warnings.get(0).areas());
+    assertEquals(List.of("Skåne län"), warnings.get(0).areas());
     assertEquals(Instant.parse("2026-03-13T09:00:00Z"), warnings.get(0).validFrom());
+  }
+
+  @Test
+  void shouldPreserveCountyAreasWhenAlreadyMappedToCounties() throws Exception {
+    when(httpJsonClient.getJson("https://opendata-download-warnings.smhi.se/ibww/api/version/1/warning.json"))
+        .thenReturn(objectMapper.readTree("""
+            [
+              {
+                "id": "3051",
+                "created": "2026-03-12T00:00:00Z",
+                "event": {
+                  "sv": "Snöfall"
+                },
+                "warningAreas": [
+                  {
+                    "id": "9673",
+                    "warningLevel": {
+                      "code": "orange"
+                    },
+                    "descriptions": [],
+                    "affectedAreas": [
+                      {
+                        "sv": "Stockholms län"
+                      }
+                    ],
+                    "published": "2026-03-13T08:00:00Z"
+                  }
+                ]
+              }
+            ]
+            """));
+
+    SmhiAdapter.SmhiWarning warning = smhiAdapter.fetchSmhiWarnings().get(0);
+
+    assertEquals(List.of("Stockholms län"), warning.areas());
   }
 
   @Test

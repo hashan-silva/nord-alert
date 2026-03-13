@@ -12,6 +12,11 @@ export interface AlertItem {
   url?: string;
 }
 
+export interface CountyItem {
+  code: string;
+  name: string;
+}
+
 interface FetchAlertsParams {
   counties: string[];
   severity: string;
@@ -40,4 +45,14 @@ export async function fetchAlerts({ counties, severity }: FetchAlertsParams): Pr
   }
 
   return response.json() as Promise<AlertItem[]>;
+}
+
+export async function fetchCounties(): Promise<CountyItem[]> {
+  const response = await fetch(`${baseUrl}/counties`);
+
+  if (!response.ok) {
+    throw new Error(`Counties request failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<CountyItem[]>;
 }

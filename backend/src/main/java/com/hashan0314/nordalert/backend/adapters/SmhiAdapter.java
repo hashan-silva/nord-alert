@@ -3,7 +3,10 @@ package com.hashan0314.nordalert.backend.adapters;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -12,6 +15,41 @@ public class SmhiAdapter {
   private static final String SMHI_WARNINGS_URL =
       "https://opendata-download-warnings.smhi.se/ibww/api/version/1/warning.json";
   private static final String EVENT_FIELD = "event";
+  private static final Map<String, List<String>> SEA_DISTRICT_COUNTY_MAP = Map.ofEntries(
+      Map.entry("Skagerrak", List.of("Västra Götalands län")),
+      Map.entry("Kattegat", List.of("Skåne län", "Hallands län", "Västra Götalands län")),
+      Map.entry("Kattegatt", List.of("Skåne län", "Hallands län", "Västra Götalands län")),
+      Map.entry("The Sound", List.of("Skåne län")),
+      Map.entry("Öresund", List.of("Skåne län")),
+      Map.entry("The Belts", List.of("Skåne län")),
+      Map.entry("Bälten", List.of("Skåne län")),
+      Map.entry("Western Baltic", List.of("Skåne län")),
+      Map.entry("Sydvästra Östersjön", List.of("Skåne län")),
+      Map.entry("Southern Baltic", List.of("Skåne län", "Blekinge län", "Kalmar län")),
+      Map.entry("Södra Östersjön", List.of("Skåne län", "Blekinge län", "Kalmar län")),
+      Map.entry("South-eastern Baltic", List.of("Kalmar län", "Gotlands län")),
+      Map.entry("Sydöstra Östersjön", List.of("Kalmar län", "Gotlands län")),
+      Map.entry("Central Baltic", List.of("Östergötlands län", "Kalmar län", "Gotlands län", "Stockholms län")),
+      Map.entry("Mellersta Östersjön", List.of("Östergötlands län", "Kalmar län", "Gotlands län", "Stockholms län")),
+      Map.entry("Northern Baltic", List.of("Stockholms län", "Uppsala län", "Södermanlands län")),
+      Map.entry("Norra Östersjön", List.of("Stockholms län", "Uppsala län", "Södermanlands län")),
+      Map.entry("Sea of Åland and Archipelago Sea", List.of("Stockholms län", "Uppsala län")),
+      Map.entry("Sea of Aaland and Archipelago Sea", List.of("Stockholms län", "Uppsala län")),
+      Map.entry("Ålands hav och Skärgårdshavet", List.of("Stockholms län", "Uppsala län")),
+      Map.entry("Sea of Bothnia", List.of("Gävleborgs län", "Västernorrlands län")),
+      Map.entry("Southern Sea of Bothnia", List.of("Gävleborgs län", "Västernorrlands län")),
+      Map.entry("Bottenhavet", List.of("Gävleborgs län", "Västernorrlands län")),
+      Map.entry("Northern Sea of Bothnia", List.of("Västernorrlands län", "Västerbottens län")),
+      Map.entry("Norra Bottenhavet", List.of("Västernorrlands län", "Västerbottens län")),
+      Map.entry("The Quark", List.of("Västernorrlands län", "Västerbottens län")),
+      Map.entry("Norra Kvarken", List.of("Västernorrlands län", "Västerbottens län")),
+      Map.entry("Bay of Bothnia", List.of("Västerbottens län", "Norrbottens län")),
+      Map.entry("Bottenviken", List.of("Västerbottens län", "Norrbottens län")),
+      Map.entry("Lake Vänern and Trollhätte Canal", List.of("Västra Götalands län", "Värmlands län")),
+      Map.entry("Vänern och Trollhätte kanal", List.of("Västra Götalands län", "Värmlands län")),
+      Map.entry("Lake Mälaren and Södertälje Canal", List.of("Stockholms län", "Södermanlands län", "Uppsala län", "Västmanlands län")),
+      Map.entry("Mälaren och Södertälje kanal", List.of("Stockholms län", "Södermanlands län", "Uppsala län", "Västmanlands län"))
+  );
 
   private final HttpJsonClient httpJsonClient;
 
@@ -37,7 +75,7 @@ public class SmhiAdapter {
         String levelCode = area.path("warningLevel").path("code").asText("").toLowerCase();
         WarningLevel level = mapLevel(levelCode);
         String description = joinDescriptions(area.path("descriptions"));
-        List<String> areas = collectStrings(area.path("affectedAreas"));
+        List<String> areas = collectAreas(area.path("affectedAreas"));
         Instant validFrom = firstInstant(
             area.path("approximateStart").asText(null),
             area.path("published").asText(null),
@@ -85,15 +123,19 @@ public class SmhiAdapter {
     return String.join("\n", values);
   }
 
-  private static List<String> collectStrings(JsonNode affectedAreas) {
-    List<String> values = new ArrayList<>();
+  private static List<String> collectAreas(JsonNode affectedAreas) {
+    Set<String> values = new LinkedHashSet<>();
     for (JsonNode area : affectedAreas) {
-      String text = firstText(area.path("en"), area.path("sv"));
+      String text = firstText(area.path("sv"), area.path("en"));
       if (!text.isBlank()) {
-        values.add(text);
+        values.addAll(mapToCounties(text));
       }
     }
-    return values;
+    return new ArrayList<>(values);
+  }
+
+  private static List<String> mapToCounties(String area) {
+    return SEA_DISTRICT_COUNTY_MAP.getOrDefault(area, List.of(area));
   }
 
   private static String firstText(JsonNode... nodes) {
