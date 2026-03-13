@@ -1,6 +1,8 @@
 package com.hashan0314.nordalert.backend.adapters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,6 +57,13 @@ class SmhiAdapterTest {
                         "en": "The Belts"
                       }
                     ],
+                    "area": {
+                      "type": "Feature",
+                      "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[12.0, 55.0], [13.0, 55.0], [13.0, 56.0], [12.0, 55.0]]]
+                      }
+                    },
                     "approximateStart": "2026-03-13T09:00:00Z",
                     "approximateEnd": "2026-03-13T12:00:00Z"
                   }
@@ -70,6 +79,7 @@ class SmhiAdapterTest {
     assertEquals(SmhiAdapter.WarningLevel.RED, warnings.get(0).level());
     assertEquals(List.of("Skåne län"), warnings.get(0).areas());
     assertEquals(Instant.parse("2026-03-13T09:00:00Z"), warnings.get(0).validFrom());
+    assertNotNull(warnings.get(0).geoJson());
   }
 
   @Test
@@ -105,6 +115,7 @@ class SmhiAdapterTest {
     SmhiAdapter.SmhiWarning warning = smhiAdapter.fetchSmhiWarnings().get(0);
 
     assertEquals(List.of("Stockholms län"), warning.areas());
+    assertEquals("", warning.url());
   }
 
   @Test
@@ -137,5 +148,6 @@ class SmhiAdapterTest {
 
     assertEquals(SmhiAdapter.WarningLevel.YELLOW, warning.level());
     assertEquals(Instant.parse("2026-03-13T08:00:00Z"), warning.validFrom());
+    assertNull(warning.geoJson());
   }
 }

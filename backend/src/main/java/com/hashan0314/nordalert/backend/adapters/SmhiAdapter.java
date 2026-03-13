@@ -96,7 +96,8 @@ public class SmhiAdapter {
             areas,
             validFrom,
             validTo,
-            ""
+            "",
+            geoJson(area.path("area"))
         ));
       }
     }
@@ -150,6 +151,10 @@ public class SmhiAdapter {
     return "";
   }
 
+  private static JsonNode geoJson(JsonNode value) {
+    return value.isMissingNode() || value.isNull() ? null : value;
+  }
+
   private static Instant firstInstant(String... values) {
     for (String value : values) {
       if (value != null && !value.isBlank()) {
@@ -167,7 +172,8 @@ public class SmhiAdapter {
       List<String> areas,
       Instant validFrom,
       Instant validTo,
-      String url
+      String url,
+      JsonNode geoJson
   ) {
   }
 

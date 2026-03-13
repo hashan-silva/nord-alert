@@ -1,6 +1,7 @@
 package com.hashan0314.nordalert.backend.models;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
@@ -22,6 +23,11 @@ public record Alert(
     @Schema(example = "2026-03-12T16:52:18Z")
     Instant publishedAt,
     @Schema(example = "https://polisen.se/aktuellt/handelser/2026/mars/12/12-mars-17.32-brand-goteborg/")
-    String url
+    String url,
+    @Schema(example = "58.252793")
+    Double latitude,
+    @Schema(example = "13.059643")
+    Double longitude,
+    JsonNode geoJson
 ) {
 }

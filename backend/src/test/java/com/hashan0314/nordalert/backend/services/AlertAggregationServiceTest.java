@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,8 @@ import com.hashan0314.nordalert.backend.models.Severity;
 
 @ExtendWith(MockitoExtension.class)
 class AlertAggregationServiceTest {
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Mock
   private PolisenAdapter polisenAdapter;
@@ -59,7 +62,8 @@ class AlertAggregationServiceTest {
             List.of("The Belts"),
             Instant.parse("2026-03-13T09:00:00Z"),
             Instant.parse("2026-03-13T12:00:00Z"),
-            ""
+            "",
+            OBJECT_MAPPER.createObjectNode().put("type", "Feature")
         )
     ));
     when(krisinformationAdapter.fetchKrisinformationItems()).thenReturn(List.of(
@@ -79,6 +83,9 @@ class AlertAggregationServiceTest {
     assertEquals(3, alerts.size());
     assertEquals(List.of("s-1", "k-1", "p-1"), alerts.stream().map(Alert::id).toList());
     assertEquals(Severity.HIGH, alerts.get(0).severity());
+    assertEquals(59.0, alerts.get(2).latitude());
+    assertEquals(18.0, alerts.get(2).longitude());
+    assertEquals("Feature", alerts.get(0).geoJson().path("type").asText());
     assertEquals(List.of("Stockholms län"), alerts.get(2).areas());
   }
 

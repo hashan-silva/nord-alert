@@ -40,7 +40,10 @@ public class AlertAggregationService {
           event.location().name().isBlank() ? List.of() : List.of(event.location().name()),
           Severity.INFO,
           event.occurredAt(),
-          event.url()
+          event.url(),
+          event.location().lat(),
+          event.location().lon(),
+          null
       ));
     }
 
@@ -53,7 +56,10 @@ public class AlertAggregationService {
           warning.areas(),
           mapSeverity(warning.level()),
           warning.validFrom(),
-          warning.url()
+          warning.url(),
+          null,
+          null,
+          warning.geoJson()
       ));
     }
 
@@ -66,7 +72,10 @@ public class AlertAggregationService {
           item.counties(),
           Severity.INFO,
           item.publishedAt(),
-          item.url()
+          item.url(),
+          null,
+          null,
+          null
       ));
     }
 

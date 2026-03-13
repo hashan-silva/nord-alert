@@ -4,8 +4,11 @@ export type AlertSource = 'POLISEN' | 'SMHI' | 'KRISINFORMATION' | string;
 export interface AlertItem {
   areas?: string[];
   description?: string;
+  geoJson?: Record<string, unknown>;
   headline: string;
   id: string;
+  latitude?: number;
+  longitude?: number;
   publishedAt?: string;
   severity: AlertSeverity;
   source: AlertSource;

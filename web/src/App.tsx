@@ -3,6 +3,8 @@ import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import {
   Alert,
+  ToggleButton,
+  ToggleButtonGroup,
   Box,
   Button,
   Checkbox,
@@ -22,6 +24,7 @@ import {
   Typography
 } from '@mui/material';
 import { type SelectChangeEvent } from '@mui/material/Select';
+import AlertMap from './components/AlertMap';
 import AlertList from './components/AlertList';
 import SummaryCard from './components/SummaryCard';
 import { type AlertItem, type CountyItem, baseUrl, fetchAlerts, fetchCounties } from './lib/api';
@@ -46,6 +49,7 @@ function App() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [countyOptions, setCountyOptions] = useState<CountyItem[]>([]);
   const [selectedCounties, setSelectedCounties] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('list');
   const [severity, setSeverity] = useState('');
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
@@ -346,6 +350,7 @@ function App() {
                   direction={{ xs: 'column', sm: 'row' }}
                   justifyContent="space-between"
                   spacing={2}
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
                 >
                   <Box>
                     <Typography variant="h3">Live feed</Typography>
@@ -353,11 +358,31 @@ function App() {
                       Aggregated official alerts from the backend `/alerts` endpoint.
                     </Typography>
                   </Box>
-                  <Typography color="text.secondary" variant="body2">
-                    {loading
-                      ? 'Refreshing feed...'
-                      : `${filteredAlerts.length} alerts loaded, page ${page} of ${pageCount}`}
-                  </Typography>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  >
+                    <ToggleButtonGroup
+                      size="small"
+                      exclusive
+                      color="primary"
+                      value={viewMode}
+                      onChange={(_, nextView) => {
+                        if (nextView) {
+                          setViewMode(nextView);
+                        }
+                      }}
+                    >
+                      <ToggleButton value="list">List</ToggleButton>
+                      <ToggleButton value="map">Map</ToggleButton>
+                    </ToggleButtonGroup>
+                    <Typography color="text.secondary" variant="body2">
+                      {loading
+                        ? 'Refreshing feed...'
+                        : `${filteredAlerts.length} alerts loaded${viewMode === 'list' ? `, page ${page} of ${pageCount}` : ''}`}
+                    </Typography>
+                  </Stack>
                 </Stack>
 
                 {error && (
@@ -366,17 +391,23 @@ function App() {
                   </Alert>
                 )}
 
-                <AlertList alerts={paginatedAlerts} />
+                {viewMode === 'map' ? (
+                  <AlertMap alerts={filteredAlerts} />
+                ) : (
+                  <>
+                    <AlertList alerts={paginatedAlerts} />
 
-                {filteredAlerts.length > alertsPerPage && (
-                  <Stack alignItems="center" pt={1}>
-                    <Pagination
-                      color="primary"
-                      count={pageCount}
-                      page={page}
-                      onChange={(_, value) => setPage(value)}
-                    />
-                  </Stack>
+                    {filteredAlerts.length > alertsPerPage && (
+                      <Stack alignItems="center" pt={1}>
+                        <Pagination
+                          color="primary"
+                          count={pageCount}
+                          page={page}
+                          onChange={(_, value) => setPage(value)}
+                        />
+                      </Stack>
+                    )}
+                  </>
                 )}
               </Stack>
             </Paper>

@@ -84,7 +84,10 @@ class AlertControllerTest {
         List.of(county),
         severity,
         publishedAt,
-        "https://example.com/" + id
+        "https://example.com/" + id,
+        null,
+        null,
+        null
     );
   }
 }
