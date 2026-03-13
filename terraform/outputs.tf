@@ -8,6 +8,11 @@ output "lambda_function_name" {
   value       = aws_lambda_function.backend.function_name
 }
 
+output "subscription_dispatcher_function_name" {
+  description = "Scheduled email dispatcher Lambda function name"
+  value       = aws_lambda_function.subscription_dispatcher.function_name
+}
+
 output "ecr_repository_url" {
   description = "ECR repository URL for Lambda image deployments"
   value       = data.aws_ecr_repository.lambda.repository_url
@@ -26,4 +31,9 @@ output "web_distribution_id" {
 output "web_distribution_domain_name" {
   description = "CloudFront domain name for the React dashboard"
   value       = aws_cloudfront_distribution.web.domain_name
+}
+
+output "subscription_table_name" {
+  description = "DynamoDB table storing email subscriptions"
+  value       = aws_dynamodb_table.subscriptions.name
 }

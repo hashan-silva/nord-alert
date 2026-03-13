@@ -11,7 +11,7 @@ public class CorsConfig implements WebMvcConfigurer {
   public void addCorsMappings(CorsRegistry registry) {
     registry.addMapping("/**")
         .allowedOriginPatterns("http://localhost:3000", "https://*.cloudfront.net")
-        .allowedMethods("GET", "OPTIONS")
+        .allowedMethods("GET", "POST", "OPTIONS")
         .allowedHeaders("*")
         .maxAge(3600);
   }

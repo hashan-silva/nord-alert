@@ -25,10 +25,13 @@ provider "aws" {
 locals {
   workspace                   = var.workspace_name
   name_prefix                 = "${var.project_name}-${local.workspace}"
+  subscription_table_name     = lower("${local.name_prefix}-subscriptions")
   web_bucket_name             = lower("${local.name_prefix}-web")
   web_logs_bucket_name        = lower("${local.name_prefix}-web-logs")
   web_access_logs_bucket_name = lower("${local.name_prefix}-web-access-logs")
 }
+
+data "aws_caller_identity" "current" {}
 
 data "aws_ecr_repository" "lambda" {
   name = var.ecr_repository_name
@@ -77,6 +80,35 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_role_policy" "lambda_app" {
+  name = "${local.name_prefix}-lambda-app-policy"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:Scan",
+          "dynamodb:UpdateItem"
+        ]
+        Resource = aws_dynamodb_table.subscriptions.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        Resource = aws_ses_email_identity.subscription_sender.arn
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role" "apigateway_logs" {
   name = "${local.name_prefix}-apigw-logs-role"
 
@@ -119,6 +151,36 @@ resource "aws_lambda_function" "backend" {
   memory_size   = var.lambda_memory_size
   architectures = [var.lambda_architecture]
 
+  environment {
+    variables = {
+      SUBSCRIPTION_TABLE_NAME  = aws_dynamodb_table.subscriptions.name
+      SUBSCRIPTION_SENDER_EMAIL = var.ses_sender_email
+    }
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.lambda_basic]
+}
+
+resource "aws_lambda_function" "subscription_dispatcher" {
+  function_name = "${local.name_prefix}-subscription-dispatcher"
+  package_type  = "Image"
+  role          = aws_iam_role.lambda.arn
+  image_uri     = var.lambda_image_uri
+  timeout       = 60
+  memory_size   = 1024
+  architectures = [var.lambda_architecture]
+
+  image_config {
+    command = ["com.hashan0314.nordalert.backend.SubscriptionDispatchLambdaHandler::handleRequest"]
+  }
+
+  environment {
+    variables = {
+      SUBSCRIPTION_TABLE_NAME  = aws_dynamodb_table.subscriptions.name
+      SUBSCRIPTION_SENDER_EMAIL = var.ses_sender_email
+    }
+  }
+
   depends_on = [aws_iam_role_policy_attachment.lambda_basic]
 }
 
@@ -128,7 +190,7 @@ resource "aws_apigatewayv2_api" "backend" {
 
   cors_configuration {
     allow_headers = ["content-type", "authorization", "x-requested-with"]
-    allow_methods = ["GET", "OPTIONS"]
+    allow_methods = ["GET", "POST", "OPTIONS"]
     allow_origins = [
       "http://localhost:3000",
       "https://${aws_cloudfront_distribution.web.domain_name}"
@@ -183,6 +245,41 @@ resource "aws_lambda_permission" "apigw" {
   function_name = aws_lambda_function.backend.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.backend.execution_arn}/*/*"
+}
+
+resource "aws_dynamodb_table" "subscriptions" {
+  name         = local.subscription_table_name
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}
+
+resource "aws_ses_email_identity" "subscription_sender" {
+  email = var.ses_sender_email
+}
+
+resource "aws_cloudwatch_event_rule" "subscription_dispatch" {
+  name                = "${local.name_prefix}-subscription-dispatch"
+  description         = "Scheduled dispatch of NordAlert email subscriptions"
+  schedule_expression = var.subscription_dispatch_schedule_expression
+}
+
+resource "aws_cloudwatch_event_target" "subscription_dispatch" {
+  rule      = aws_cloudwatch_event_rule.subscription_dispatch.name
+  target_id = "subscription-dispatcher"
+  arn       = aws_lambda_function.subscription_dispatcher.arn
+}
+
+resource "aws_lambda_permission" "eventbridge_subscription_dispatch" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.subscription_dispatcher.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.subscription_dispatch.arn
 }
 
 resource "aws_s3_bucket" "web" {
