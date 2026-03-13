@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.hashan0314.nordalert.backend.config.PublicApiProperties;
+import com.hashan0314.nordalert.backend.config.ScbApiProperties;
 import com.hashan0314.nordalert.backend.models.County;
 
 @ExtendWith(MockitoExtension.class)
@@ -18,15 +20,27 @@ class ScbCountyAdapterTest {
   private HttpTextClient httpTextClient;
 
   private ScbCountyAdapter scbCountyAdapter;
+  private final PublicApiProperties properties = createProperties();
 
   @BeforeEach
   void setUp() {
-    scbCountyAdapter = new ScbCountyAdapter(httpTextClient);
+    scbCountyAdapter = new ScbCountyAdapter(httpTextClient, properties);
+  }
+
+  private static PublicApiProperties createProperties() {
+    ScbApiProperties scb = new ScbApiProperties();
+    scb.setCountiesUrl(
+        "https://www.scb.se/en/finding-statistics/regional-statistics/regional-divisions/counties-and-municipalities/counties-and-municipalities-in-numerical-order/"
+    );
+
+    PublicApiProperties properties = new PublicApiProperties();
+    properties.setScb(scb);
+    return properties;
   }
 
   @Test
   void shouldExtractCountiesFromScbHeadings() {
-    when(httpTextClient.getText(ScbCountyAdapter.SCB_COUNTIES_URL)).thenReturn("""
+    when(httpTextClient.getText(properties.getScb().getCountiesUrl())).thenReturn("""
         <html>
           <body>
             <h1>Counties and municipalities in numerical order</h1>

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import com.hashan0314.nordalert.backend.models.Alert;
+import com.hashan0314.nordalert.backend.models.HealthResponse;
 import com.hashan0314.nordalert.backend.models.Severity;
 import com.hashan0314.nordalert.backend.services.AlertAggregationService;
 
@@ -94,12 +95,5 @@ public class AlertController {
     } catch (IllegalArgumentException e) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
     }
-  }
-
-  @ResponseStatus(HttpStatus.OK)
-  public record HealthResponse(
-      @Schema(example = "ok")
-      String status
-  ) {
   }
 }

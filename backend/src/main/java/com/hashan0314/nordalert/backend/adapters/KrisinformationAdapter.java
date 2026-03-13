@@ -5,23 +5,25 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
+import com.hashan0314.nordalert.backend.config.PublicApiProperties;
+import com.hashan0314.nordalert.backend.models.KrisinformationItem;
 
 @Component
 public class KrisinformationAdapter {
 
-  private static final String NEWS_ENDPOINT = "https://api.krisinformation.se/v3/news";
-  private static final String VMAS_ENDPOINT = "https://api.krisinformation.se/v3/vmas";
   private static final String PUSH_MESSAGE_FIELD = "pushMessage";
 
   private final HttpJsonClient httpJsonClient;
+  private final PublicApiProperties publicApiProperties;
 
-  public KrisinformationAdapter(HttpJsonClient httpJsonClient) {
+  public KrisinformationAdapter(HttpJsonClient httpJsonClient, PublicApiProperties publicApiProperties) {
     this.httpJsonClient = httpJsonClient;
+    this.publicApiProperties = publicApiProperties;
   }
 
   public List<KrisinformationItem> fetchKrisinformationItems() {
-    JsonNode news = httpJsonClient.getJson(NEWS_ENDPOINT);
-    JsonNode vmas = httpJsonClient.getJson(VMAS_ENDPOINT);
+    JsonNode news = httpJsonClient.getJson(publicApiProperties.getKrisinformation().getNewsUrl());
+    JsonNode vmas = httpJsonClient.getJson(publicApiProperties.getKrisinformation().getVmasUrl());
 
     List<KrisinformationItem> items = new ArrayList<>();
     items.addAll(normalize(news));
@@ -87,16 +89,5 @@ public class KrisinformationAdapter {
       }
     }
     return Instant.EPOCH;
-  }
-
-  public record KrisinformationItem(
-      String id,
-      String headline,
-      String preamble,
-      List<String> counties,
-      Instant publishedAt,
-      String url,
-      String pushMessage
-  ) {
   }
 }

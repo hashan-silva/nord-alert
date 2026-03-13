@@ -3,6 +3,9 @@ import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import {
   Alert,
+  CircularProgress,
+  ToggleButton,
+  ToggleButtonGroup,
   Box,
   Button,
   Checkbox,
@@ -22,9 +25,13 @@ import {
   Typography
 } from '@mui/material';
 import { type SelectChangeEvent } from '@mui/material/Select';
+import AlertMap from './components/AlertMap';
 import AlertList from './components/AlertList';
 import SummaryCard from './components/SummaryCard';
-import { type AlertItem, type CountyItem, baseUrl, fetchAlerts, fetchCounties } from './lib/api';
+import { baseUrl, fetchAlerts, fetchCounties } from './lib/api';
+import { normalizeResourceKey, resourceLabels } from './lib/alertMeta';
+import type { AlertItem } from './models/alert';
+import type { CountyItem } from './models/county';
 
 const webVersion = process.env.REACT_APP_WEB_VERSION || 'unknown';
 const backendVersion = process.env.REACT_APP_BACKEND_VERSION || 'unknown';
@@ -36,16 +43,11 @@ const severityOptions = [
   { label: 'High only', value: 'high' }
 ];
 const alertsPerPage = 6;
-const sourceLabels: Record<string, string> = {
-  krisinformation: 'Krisinformation',
-  polisen: 'Polisen',
-  smhi: 'SMHI'
-};
-
 function App() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [countyOptions, setCountyOptions] = useState<CountyItem[]>([]);
   const [selectedCounties, setSelectedCounties] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [severity, setSeverity] = useState('');
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
@@ -141,7 +143,7 @@ function App() {
 
   const sourceCounts = useMemo<Record<string, number>>(() => {
     return filteredAlerts.reduce<Record<string, number>>((counts, alert) => {
-      const sourceKey = alert.source.toLowerCase();
+      const sourceKey = normalizeResourceKey(alert.source);
       counts[sourceKey] = (counts[sourceKey] || 0) + 1;
       return counts;
     }, {});
@@ -346,6 +348,7 @@ function App() {
                   direction={{ xs: 'column', sm: 'row' }}
                   justifyContent="space-between"
                   spacing={2}
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
                 >
                   <Box>
                     <Typography variant="h3">Live feed</Typography>
@@ -353,11 +356,31 @@ function App() {
                       Aggregated official alerts from the backend `/alerts` endpoint.
                     </Typography>
                   </Box>
-                  <Typography color="text.secondary" variant="body2">
-                    {loading
-                      ? 'Refreshing feed...'
-                      : `${filteredAlerts.length} alerts loaded, page ${page} of ${pageCount}`}
-                  </Typography>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  >
+                    <ToggleButtonGroup
+                      size="small"
+                      exclusive
+                      color="primary"
+                      value={viewMode}
+                      onChange={(_, nextView) => {
+                        if (nextView) {
+                          setViewMode(nextView);
+                        }
+                      }}
+                    >
+                      <ToggleButton value="list">List</ToggleButton>
+                      <ToggleButton value="map">Map</ToggleButton>
+                    </ToggleButtonGroup>
+                    <Typography color="text.secondary" variant="body2">
+                      {loading
+                        ? 'Refreshing feed...'
+                        : `${filteredAlerts.length} alerts loaded${viewMode === 'list' ? `, page ${page} of ${pageCount}` : ''}`}
+                    </Typography>
+                  </Stack>
                 </Stack>
 
                 {error && (
@@ -366,17 +389,34 @@ function App() {
                   </Alert>
                 )}
 
-                <AlertList alerts={paginatedAlerts} />
+                {loading ? (
+                  <Box className="loading-state">
+                    <CircularProgress color="primary" size={48} thickness={4.5} />
+                    <Typography color="text.secondary" variant="body1">
+                      Loading alerts...
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {viewMode === 'map' ? (
+                      <AlertMap alerts={filteredAlerts} />
+                    ) : (
+                      <>
+                        <AlertList alerts={paginatedAlerts} />
 
-                {filteredAlerts.length > alertsPerPage && (
-                  <Stack alignItems="center" pt={1}>
-                    <Pagination
-                      color="primary"
-                      count={pageCount}
-                      page={page}
-                      onChange={(_, value) => setPage(value)}
-                    />
-                  </Stack>
+                        {filteredAlerts.length > alertsPerPage && (
+                          <Stack alignItems="center" pt={1}>
+                            <Pagination
+                              color="primary"
+                              count={pageCount}
+                              page={page}
+                              onChange={(_, value) => setPage(value)}
+                            />
+                          </Stack>
+                        )}
+                      </>
+                    )}
+                  </>
                 )}
               </Stack>
             </Paper>

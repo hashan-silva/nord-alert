@@ -35,12 +35,15 @@ This document adapts the sample agent guidelines for a Java backend, a React web
 - Backend: Keep I/O in `adapters`, pure domain in `models`, coordination in `services`, and HTTP wiring in `controllers`.
 - Web: Keep API access in small client modules, UI composition in focused React components, and styling in SCSS files layered around Material UI.
 - Single source of truth: Avoid duplicating state across layers.
+- Keep backend and web models in separate dedicated files under their respective model/type folders; avoid inline model declarations in unrelated files.
+- Do not use inner classes or inner records for public data models; extract them into standalone classes/files.
 
 ## Coding Style
 - Java: target Amazon Corretto 17, use Spring Boot conventions, 2 spaces, and keep packages under `com.hashan0314.nordalert.backend`.
 - React/TypeScript: prefer small typed components, keep API models explicit, and use SCSS for layout/theme structure rather than inline styling sprawl.
 - Naming: PascalCase for Java types/classes; camelCase for vars/functions; lowercase package names.
 - Errors: Backend code should bubble meaningful errors; avoid blanket try/catch. Web UI should surface loading and error states explicitly.
+- Public upstream API URLs should come from Spring configuration (`application.properties`) rather than being hardcoded in adapters.
 
 ## Backend — Dev & Build
 - Run dev: `cd backend && mvn spring-boot:run` (Spring Boot on `http://localhost:8080`)
