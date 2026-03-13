@@ -8,12 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Component;
+import com.hashan0314.nordalert.backend.config.PublicApiProperties;
+import com.hashan0314.nordalert.backend.models.SmhiWarning;
+import com.hashan0314.nordalert.backend.models.SmhiWarningLevel;
 
 @Component
 public class SmhiAdapter {
 
-  private static final String SMHI_WARNINGS_URL =
-      "https://opendata-download-warnings.smhi.se/ibww/api/version/1/warning.json";
   private static final String EVENT_FIELD = "event";
   private static final Map<String, List<String>> SEA_DISTRICT_COUNTY_MAP = Map.ofEntries(
       Map.entry("Skagerrak", List.of("Västra Götalands län")),
@@ -52,13 +53,15 @@ public class SmhiAdapter {
   );
 
   private final HttpJsonClient httpJsonClient;
+  private final PublicApiProperties publicApiProperties;
 
-  public SmhiAdapter(HttpJsonClient httpJsonClient) {
+  public SmhiAdapter(HttpJsonClient httpJsonClient, PublicApiProperties publicApiProperties) {
     this.httpJsonClient = httpJsonClient;
+    this.publicApiProperties = publicApiProperties;
   }
 
   public List<SmhiWarning> fetchSmhiWarnings() {
-    JsonNode data = httpJsonClient.getJson(SMHI_WARNINGS_URL);
+    JsonNode data = httpJsonClient.getJson(publicApiProperties.getSmhi().getWarningsUrl());
     if (!data.isArray()) {
       return List.of();
     }
@@ -73,7 +76,7 @@ public class SmhiAdapter {
 
       for (JsonNode area : warning.path("warningAreas")) {
         String levelCode = area.path("warningLevel").path("code").asText("").toLowerCase();
-        WarningLevel level = mapLevel(levelCode);
+        SmhiWarningLevel level = mapLevel(levelCode);
         String description = joinDescriptions(area.path("descriptions"));
         List<String> areas = collectAreas(area.path("affectedAreas"));
         Instant validFrom = firstInstant(
@@ -105,11 +108,11 @@ public class SmhiAdapter {
     return warnings;
   }
 
-  private static WarningLevel mapLevel(String levelCode) {
+  private static SmhiWarningLevel mapLevel(String levelCode) {
     return switch (levelCode) {
-      case "orange" -> WarningLevel.ORANGE;
-      case "red" -> WarningLevel.RED;
-      default -> WarningLevel.YELLOW;
+      case "orange" -> SmhiWarningLevel.ORANGE;
+      case "red" -> SmhiWarningLevel.RED;
+      default -> SmhiWarningLevel.YELLOW;
     };
   }
 
@@ -162,24 +165,5 @@ public class SmhiAdapter {
       }
     }
     return Instant.EPOCH;
-  }
-
-  public record SmhiWarning(
-      String id,
-      String eventType,
-      WarningLevel level,
-      String description,
-      List<String> areas,
-      Instant validFrom,
-      Instant validTo,
-      String url,
-      JsonNode geoJson
-  ) {
-  }
-
-  public enum WarningLevel {
-    YELLOW,
-    ORANGE,
-    RED
   }
 }

@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'react';
-import type { AlertItem } from '../lib/api';
+import type { AlertItem } from '../models/alert';
+import {
+  formatSeverity,
+  normalizeResourceKey,
+  resourceColors,
+  resourceLabels,
+  severityMapStyles
+} from '../lib/alertMeta';
 
 interface AlertMapProps {
   alerts: AlertItem[];
@@ -7,21 +14,38 @@ interface AlertMapProps {
 
 const defaultCenter: [number, number] = [62.0, 15.0];
 
-const severityPalette: Record<string, string> = {
-  high: '#b53a3f',
-  info: '#4a6a84',
-  low: '#2f7a5f',
-  medium: '#b7860b'
-};
-
 function popupContent(alert: AlertItem) {
-  const areas = alert.areas?.length ? `<div>${alert.areas.join(', ')}</div>` : '';
+  const sourceKey = normalizeResourceKey(alert.source);
+  const resourceColor = resourceColors[sourceKey] || resourceColors.polisen;
+  const severityStyle = severityMapStyles[alert.severity] || severityMapStyles.info;
+  const counties = alert.areas?.length
+    ? `
+      <div class="map-popup__section">
+        <span class="map-popup__label">Counties</span>
+        <div class="map-popup__chips">
+          ${alert.areas
+            .map(
+              (area) =>
+                `<span class="map-popup__chip map-popup__chip--county">${area}</span>`
+            )
+            .join('')}
+        </div>
+      </div>
+    `
+    : '';
+
   return `
     <div class="map-popup">
-      <strong>${alert.headline}</strong>
-      <div>${alert.source}</div>
-      <div>${alert.severity}</div>
-      ${areas}
+      <strong class="map-popup__title">${alert.headline}</strong>
+      <div class="map-popup__chips">
+        <span class="map-popup__chip map-popup__chip--resource" style="background:${resourceColor};color:#ffffff;">
+          ${resourceLabels[sourceKey] || alert.source}
+        </span>
+        <span class="map-popup__chip map-popup__chip--severity" style="background:${severityStyle.background};color:${severityStyle.color};">
+          ${formatSeverity(alert.severity)}
+        </span>
+      </div>
+      ${counties}
     </div>
   `;
 }
@@ -63,15 +87,18 @@ function AlertMap({ alerts }: AlertMapProps) {
     const bounds = window.L.latLngBounds([]);
 
     alerts.forEach((alert) => {
-      const color = severityPalette[alert.severity] || severityPalette.info;
+      const sourceKey = normalizeResourceKey(alert.source);
+      const color = resourceColors[sourceKey] || resourceColors.polisen;
+      const severityStyle = severityMapStyles[alert.severity] || severityMapStyles.info;
 
       if (alert.geoJson) {
         const geoLayer = window.L.geoJSON(alert.geoJson, {
           style: {
             color,
             fillColor: color,
-            fillOpacity: 0.22,
-            weight: 2
+            opacity: severityStyle.strokeOpacity,
+            fillOpacity: severityStyle.fillOpacity,
+            weight: severityStyle.weight
           }
         });
         geoLayer.bindPopup(popupContent(alert));
@@ -86,9 +113,9 @@ function AlertMap({ alerts }: AlertMapProps) {
         const marker = window.L.circleMarker([alert.latitude, alert.longitude], {
           color,
           fillColor: color,
-          fillOpacity: 0.85,
-          radius: 7,
-          weight: 2
+          fillOpacity: severityStyle.fillOpacity + 0.5,
+          radius: alert.severity === 'high' ? 9 : alert.severity === 'medium' ? 8 : 7,
+          weight: severityStyle.weight
         });
         marker.bindPopup(popupContent(alert));
         marker.addTo(layerRef.current);

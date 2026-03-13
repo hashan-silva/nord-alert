@@ -12,6 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.hashan0314.nordalert.backend.config.PolisenApiProperties;
+import com.hashan0314.nordalert.backend.config.PublicApiProperties;
+import com.hashan0314.nordalert.backend.models.PolisenEvent;
 
 @ExtendWith(MockitoExtension.class)
 class PolisenAdapterTest {
@@ -21,10 +24,21 @@ class PolisenAdapterTest {
 
   private PolisenAdapter polisenAdapter;
   private final ObjectMapper objectMapper = new ObjectMapper();
+  private final PublicApiProperties properties = createProperties();
 
   @BeforeEach
   void setUp() {
-    polisenAdapter = new PolisenAdapter(httpJsonClient);
+    polisenAdapter = new PolisenAdapter(httpJsonClient, properties);
+  }
+
+  private static PublicApiProperties createProperties() {
+    PolisenApiProperties polisen = new PolisenApiProperties();
+    polisen.setBaseUrl("https://polisen.se");
+    polisen.setEventsUrl("https://polisen.se/api/events");
+
+    PublicApiProperties properties = new PublicApiProperties();
+    properties.setPolisen(polisen);
+    return properties;
   }
 
   @Test
@@ -46,7 +60,7 @@ class PolisenAdapterTest {
         ]
         """));
 
-    List<PolisenAdapter.PolisenEvent> events = polisenAdapter.fetchPolisenEvents();
+    List<PolisenEvent> events = polisenAdapter.fetchPolisenEvents();
 
     assertEquals(1, events.size());
     assertEquals("627250", events.get(0).id());
@@ -70,7 +84,7 @@ class PolisenAdapterTest {
         ]
         """));
 
-    PolisenAdapter.PolisenEvent event = polisenAdapter.fetchPolisenEvents().get(0);
+    PolisenEvent event = polisenAdapter.fetchPolisenEvents().get(0);
 
     assertEquals("legacy-id", event.id());
     assertNull(event.location().lat());
@@ -93,7 +107,7 @@ class PolisenAdapterTest {
         ]
         """));
 
-    PolisenAdapter.PolisenEvent event = polisenAdapter.fetchPolisenEvents().get(0);
+    PolisenEvent event = polisenAdapter.fetchPolisenEvents().get(0);
 
     assertEquals("https://polisen.se/aktuellt/handelser/2026/mars/12/brand-goteborg/", event.url());
   }

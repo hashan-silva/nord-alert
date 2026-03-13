@@ -12,6 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.hashan0314.nordalert.backend.config.KrisinformationApiProperties;
+import com.hashan0314.nordalert.backend.config.PublicApiProperties;
+import com.hashan0314.nordalert.backend.models.KrisinformationItem;
 
 @ExtendWith(MockitoExtension.class)
 class KrisinformationAdapterTest {
@@ -21,10 +24,21 @@ class KrisinformationAdapterTest {
 
   private KrisinformationAdapter krisinformationAdapter;
   private final ObjectMapper objectMapper = new ObjectMapper();
+  private final PublicApiProperties properties = createProperties();
 
   @BeforeEach
   void setUp() {
-    krisinformationAdapter = new KrisinformationAdapter(httpJsonClient);
+    krisinformationAdapter = new KrisinformationAdapter(httpJsonClient, properties);
+  }
+
+  private static PublicApiProperties createProperties() {
+    KrisinformationApiProperties krisinformation = new KrisinformationApiProperties();
+    krisinformation.setNewsUrl("https://api.krisinformation.se/v3/news");
+    krisinformation.setVmasUrl("https://api.krisinformation.se/v3/vmas");
+
+    PublicApiProperties properties = new PublicApiProperties();
+    properties.setKrisinformation(krisinformation);
+    return properties;
   }
 
   @Test
@@ -54,7 +68,7 @@ class KrisinformationAdapterTest {
         ]
         """));
 
-    List<KrisinformationAdapter.KrisinformationItem> items = krisinformationAdapter.fetchKrisinformationItems();
+    List<KrisinformationItem> items = krisinformationAdapter.fetchKrisinformationItems();
 
     assertEquals(2, items.size());
     assertEquals("news-1", items.get(0).id());

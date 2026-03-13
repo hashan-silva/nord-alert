@@ -1,25 +1,26 @@
 package com.hashan0314.nordalert.backend.adapters;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
+import com.hashan0314.nordalert.backend.config.PublicApiProperties;
+import com.hashan0314.nordalert.backend.models.PolisenEvent;
+import com.hashan0314.nordalert.backend.models.PolisenLocation;
 
 @Component
 public class PolisenAdapter {
 
-  private static final String POLISEN_BASE_URL = "https://polisen.se";
-  private static final String POLISEN_EVENTS_URL = "https://polisen.se/api/events";
-
   private final HttpJsonClient httpJsonClient;
+  private final PublicApiProperties publicApiProperties;
 
-  public PolisenAdapter(HttpJsonClient httpJsonClient) {
+  public PolisenAdapter(HttpJsonClient httpJsonClient, PublicApiProperties publicApiProperties) {
     this.httpJsonClient = httpJsonClient;
+    this.publicApiProperties = publicApiProperties;
   }
 
   public List<PolisenEvent> fetchPolisenEvents() {
-    JsonNode events = httpJsonClient.getJson(POLISEN_EVENTS_URL);
+    JsonNode events = httpJsonClient.getJson(publicApiProperties.getPolisen().getEventsUrl());
     if (!events.isArray()) {
       return List.of();
     }
@@ -36,9 +37,9 @@ public class PolisenAdapter {
           text(event.path("name")),
           text(event.path("type")),
           text(event.path("summary")),
-          normalizeUrl(text(event.path("url")), eventId),
+          normalizeUrl(text(event.path("url")), eventId, publicApiProperties.getPolisen().getBaseUrl()),
           DateParser.parse(text(event.path("datetime"))),
-          new Location(
+          new PolisenLocation(
               text(event.path("location").path("name")),
               latitude,
               longitude
@@ -58,14 +59,14 @@ public class PolisenAdapter {
 
   private static String normalizeUrl(String url, String id) {
     if (url == null || url.isBlank()) {
-      return POLISEN_BASE_URL + "/aktuellt/handelser/" + id;
+      return "/aktuellt/handelser/" + id;
     }
 
     if (url.startsWith("http://") || url.startsWith("https://")) {
       return url;
     }
 
-    return url.startsWith("/") ? POLISEN_BASE_URL + url : POLISEN_BASE_URL + "/" + url;
+    return url;
   }
 
   private static String parseGps(String gps) {
@@ -84,21 +85,11 @@ public class PolisenAdapter {
     }
   }
 
-  public record PolisenEvent(
-      String id,
-      String title,
-      String type,
-      String summary,
-      String url,
-      Instant occurredAt,
-      Location location
-  ) {
-  }
-
-  public record Location(
-      String name,
-      Double lat,
-      Double lon
-  ) {
+  private String normalizeUrl(String url, String id, String baseUrl) {
+    String normalized = normalizeUrl(url, id);
+    if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+      return normalized;
+    }
+    return normalized.startsWith("/") ? baseUrl + normalized : baseUrl + "/" + normalized;
   }
 }

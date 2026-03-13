@@ -9,7 +9,11 @@ import com.hashan0314.nordalert.backend.adapters.PolisenAdapter;
 import com.hashan0314.nordalert.backend.adapters.SmhiAdapter;
 import com.hashan0314.nordalert.backend.models.Alert;
 import com.hashan0314.nordalert.backend.models.AlertSource;
+import com.hashan0314.nordalert.backend.models.KrisinformationItem;
+import com.hashan0314.nordalert.backend.models.PolisenEvent;
 import com.hashan0314.nordalert.backend.models.Severity;
+import com.hashan0314.nordalert.backend.models.SmhiWarning;
+import com.hashan0314.nordalert.backend.models.SmhiWarningLevel;
 
 @Service
 public class AlertAggregationService {
@@ -31,7 +35,7 @@ public class AlertAggregationService {
   public List<Alert> fetchAllAlerts() {
     List<Alert> alerts = new ArrayList<>();
 
-    for (PolisenAdapter.PolisenEvent event : polisenAdapter.fetchPolisenEvents()) {
+    for (PolisenEvent event : polisenAdapter.fetchPolisenEvents()) {
       alerts.add(new Alert(
           AlertSource.POLISEN,
           event.id(),
@@ -47,7 +51,7 @@ public class AlertAggregationService {
       ));
     }
 
-    for (SmhiAdapter.SmhiWarning warning : smhiAdapter.fetchSmhiWarnings()) {
+    for (SmhiWarning warning : smhiAdapter.fetchSmhiWarnings()) {
       alerts.add(new Alert(
           AlertSource.SMHI,
           warning.id(),
@@ -63,7 +67,7 @@ public class AlertAggregationService {
       ));
     }
 
-    for (KrisinformationAdapter.KrisinformationItem item : krisinformationAdapter.fetchKrisinformationItems()) {
+    for (KrisinformationItem item : krisinformationAdapter.fetchKrisinformationItems()) {
       alerts.add(new Alert(
           AlertSource.KRISINFORMATION,
           item.id(),
@@ -83,7 +87,7 @@ public class AlertAggregationService {
     return alerts;
   }
 
-  private static Severity mapSeverity(SmhiAdapter.WarningLevel level) {
+  private static Severity mapSeverity(SmhiWarningLevel level) {
     return switch (level) {
       case RED -> Severity.HIGH;
       case ORANGE -> Severity.MEDIUM;

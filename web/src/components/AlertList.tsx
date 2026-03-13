@@ -1,57 +1,19 @@
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import { Box, Chip, Divider, Link, List, ListItem, Stack, Typography } from '@mui/material';
-import type { AlertItem } from '../lib/api';
+import type { AlertItem } from '../models/alert';
+import {
+  countyChipSx,
+  formatSeverity,
+  normalizeResourceKey,
+  resourceChipSx,
+  resourceLabels,
+  severityChipSx
+} from '../lib/alertMeta';
 
 interface AlertListProps {
   alerts: AlertItem[];
 }
-
-const sourceLabels: Record<string, string> = {
-  krisinformation: 'Krisinformation',
-  polisen: 'Polisen',
-  smhi: 'SMHI'
-};
-
-const resourceChipSx: Record<string, object> = {
-  krisinformation: {
-    color: '#ffffff',
-    backgroundColor: '#23715f'
-  },
-  polisen: {
-    color: '#ffffff',
-    backgroundColor: '#0a4f86'
-  },
-  smhi: {
-    color: '#15324b',
-    backgroundColor: '#f0c649'
-  }
-};
-
-const severityChipSx: Record<string, object> = {
-  high: {
-    color: '#ffffff',
-    backgroundColor: '#b53a3f'
-  },
-  info: {
-    color: '#15324b',
-    backgroundColor: '#dbe7f2'
-  },
-  low: {
-    color: '#1e4d3d',
-    backgroundColor: '#d9efe6'
-  },
-  medium: {
-    color: '#4e3900',
-    backgroundColor: '#f1d88a'
-  }
-};
-
-const countyChipSx = {
-  color: '#0a4f86',
-  backgroundColor: '#eef4f8',
-  borderColor: 'rgba(10, 79, 134, 0.18)'
-};
 
 function formatTimestamp(value?: string) {
   if (!value) {
@@ -62,10 +24,6 @@ function formatTimestamp(value?: string) {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(new Date(value));
-}
-
-function formatSeverity(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function AlertList({ alerts }: AlertListProps) {
@@ -95,9 +53,11 @@ function AlertList({ alerts }: AlertListProps) {
                 <Stack spacing={1}>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Chip
-                      label={sourceLabels[alert.source] || alert.source}
+                      label={resourceLabels[normalizeResourceKey(alert.source)] || alert.source}
                       size="small"
-                      sx={resourceChipSx[alert.source] || resourceChipSx.polisen}
+                      sx={
+                        resourceChipSx[normalizeResourceKey(alert.source)] || resourceChipSx.polisen
+                      }
                     />
                     <Chip
                       label={formatSeverity(alert.severity)}

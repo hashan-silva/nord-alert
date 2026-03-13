@@ -1,24 +1,5 @@
-export type AlertSeverity = 'info' | 'medium' | 'high' | string;
-export type AlertSource = 'POLISEN' | 'SMHI' | 'KRISINFORMATION' | string;
-
-export interface AlertItem {
-  areas?: string[];
-  description?: string;
-  geoJson?: Record<string, unknown>;
-  headline: string;
-  id: string;
-  latitude?: number;
-  longitude?: number;
-  publishedAt?: string;
-  severity: AlertSeverity;
-  source: AlertSource;
-  url?: string;
-}
-
-export interface CountyItem {
-  code: string;
-  name: string;
-}
+import type { AlertItem } from '../models/alert';
+import type { CountyItem } from '../models/county';
 
 interface FetchAlertsParams {
   counties: string[];
