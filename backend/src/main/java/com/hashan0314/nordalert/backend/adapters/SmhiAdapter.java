@@ -66,8 +66,8 @@ public class SmhiAdapter {
     List<SmhiWarning> warnings = new ArrayList<>();
     for (JsonNode warning : data) {
       String eventType = firstText(
-          warning.path(EVENT_FIELD).path("en"),
           warning.path(EVENT_FIELD).path("sv"),
+          warning.path(EVENT_FIELD).path("en"),
           warning.path(EVENT_FIELD).path("code")
       );
 
@@ -115,7 +115,7 @@ public class SmhiAdapter {
   private static String joinDescriptions(JsonNode descriptions) {
     List<String> values = new ArrayList<>();
     for (JsonNode description : descriptions) {
-      String text = firstText(description.path("text").path("en"), description.path("text").path("sv"));
+      String text = firstText(description.path("text").path("sv"), description.path("text").path("en"));
       if (!text.isBlank()) {
         values.add(text);
       }
