@@ -2,6 +2,10 @@
 
 NordAlert is a web dashboard and backend platform that aggregates official alerts from Polisen (the Swedish Police Authority), SMHI (Swedish Meteorological and Hydrological Institute), and Krisinformation (Swedish Crisis Information).
 
+Current application versions:
+- Backend: `1.1.1`
+- Frontend: `1.1.1`
+
 [![Build and Deploy Backend](https://github.com/hashan-silva/nord-alert/actions/workflows/deploy.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/deploy.yml)
 [![Build and Analyze](https://github.com/hashan-silva/nord-alert/actions/workflows/build.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/build.yml)
 [![CodeQL](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql)
