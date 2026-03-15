@@ -6,6 +6,10 @@ Current application versions:
 - Backend: `1.1.1`
 - Frontend: `1.1.1`
 
+Live links:
+- Web dashboard: https://d233b3o4qrwfy2.cloudfront.net/
+- Backend API and docs: https://lbs3fr6lj6.execute-api.eu-north-1.amazonaws.com
+
 ![NordAlert cover image](docs/cover-image.png)
 
 [![Build and Deploy Backend](https://github.com/hashan-silva/nord-alert/actions/workflows/deploy.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/deploy.yml)
