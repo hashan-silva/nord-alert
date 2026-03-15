@@ -57,27 +57,116 @@ This repository is a monorepo containing the web dashboard, backend service, and
 
 ## Architecture
 
-NordAlert is split into a React frontend, a Spring Boot backend running on AWS Lambda, and Terraform-managed AWS infrastructure.
+NordAlert is split into a React frontend, a Spring Boot backend running on AWS Lambda, and Terraform-managed AWS infrastructure. It is also a practical example of how AWS serverless components can be composed into a real public information platform without managing traditional servers.
 
 ![NordAlert architecture](docs/architecture.png)
 
-- **Web dashboard**
-  - The React app loads alerts from the backend `/alerts` API and county metadata from `/counties`.
-  - Users can filter alerts by counties, severity, sources, and date range.
-  - The map view renders point alerts and polygon-based warning areas directly in the browser with Leaflet and OpenStreetMap tiles.
+NordAlert fits serverless especially well because its workload is event-driven:
 
-- **Backend API**
-  - `adapters/` fetch and normalize external source data from Polisen, SMHI, Krisinformation, and SCB.
-  - `services/` aggregate alerts, resolve county data, and handle subscription workflows.
-  - `controllers/` expose the HTTP API for alerts, counties, health, and subscriptions.
-  - The backend exposes aggregated alert items with optional coordinates and GeoJSON so the frontend can render both list and map views.
+- users open a dashboard and request alerts on demand
+- the backend aggregates public APIs only when needed
+- the frontend is static and globally cacheable
+- email dispatch runs on a schedule rather than in a permanent background process
 
-- **AWS serverless platform**
-  - API requests flow through API Gateway to the main backend Lambda.
-  - The React frontend is deployed to S3 and served globally through CloudFront.
-  - Email subscriptions are stored in DynamoDB.
-  - SES is used for sender identity management, recipient verification, and outbound alert email delivery.
-  - EventBridge triggers a scheduled Lambda dispatcher that checks confirmed subscriptions and sends new matching alerts.
+Instead of using EC2 or a long-running container platform, NordAlert composes narrow AWS managed services that each solve one concern cleanly.
+
+### Core AWS Serverless Components
+
+#### AWS Lambda
+
+AWS Lambda is the main compute layer for NordAlert.
+
+- The primary backend Lambda serves `/alerts`, `/counties`, `/subscriptions`, and `/health`.
+- A second scheduled Lambda handles subscription dispatch.
+- The backend only runs when requests arrive or when a scheduled event fires, which keeps the runtime model simple and cost-aligned.
+
+#### Amazon API Gateway
+
+API Gateway HTTP API is the public HTTPS entrypoint for the backend.
+
+- It receives frontend requests.
+- It routes them into the backend Lambda.
+- It provides the browser-facing API boundary for the React application.
+
+This keeps the frontend decoupled from the runtime details of the backend.
+
+#### Amazon S3 and CloudFront
+
+The React frontend is deployed as static assets.
+
+- S3 stores the built dashboard files.
+- CloudFront serves them globally with caching and HTTPS.
+
+This gives NordAlert a fast web experience without operating a dedicated web server tier.
+
+#### Amazon DynamoDB
+
+DynamoDB stores subscription state.
+
+It persists:
+
+- subscriber email address
+- selected counties
+- selected sources
+- severity threshold
+- subscription status such as `pending` and `confirmed`
+- timestamps like creation, confirmation, and last notification
+
+This fits the access pattern well because the subscription model is simple and lookup/update behavior is predictable.
+
+#### Amazon SES
+
+SES handles email identity management and alert delivery.
+
+In NordAlert it is used for:
+
+- sender identity configuration
+- recipient email identity creation and verification
+- outbound alert email delivery
+
+That makes SES a practical fit for the subscription workflow instead of building custom email infrastructure.
+
+#### Amazon EventBridge
+
+EventBridge runs the scheduled dispatch workflow.
+
+- It triggers the subscription dispatcher Lambda on a schedule.
+- The dispatcher loads confirmed subscriptions.
+- It filters newly matching alerts.
+- It sends alert emails through SES.
+
+This keeps the alert delivery path asynchronous and out of the interactive API request flow.
+
+### Web Dashboard
+
+The React application is the user-facing operational surface.
+
+- The React app loads alerts from the backend `/alerts` API and county metadata from `/counties`.
+- Users can filter alerts by counties, severity, sources, and date range.
+- Alerts are shown in both list and map views.
+- The map view renders point alerts and polygon-based warning areas directly in the browser with Leaflet and OpenStreetMap tiles.
+
+### Backend API
+
+The backend is organized into clear layers:
+
+- `adapters/` fetch and normalize external source data from Polisen, SMHI, Krisinformation, and SCB
+- `services/` aggregate alerts, resolve county data, and handle subscription workflows
+- `controllers/` expose the HTTP API for alerts, counties, health, and subscriptions
+- `models/` define the backend data contracts
+
+The backend exposes aggregated alert items with optional coordinates and GeoJSON so the frontend can render both list and map views without a second transformation layer.
+
+### Practical NordAlert Flow
+
+#### Alert consumption flow
+
+1. A user opens the NordAlert dashboard.
+2. CloudFront serves the static frontend from S3.
+3. The frontend calls API Gateway.
+4. API Gateway invokes the backend Lambda.
+5. The backend aggregates official alert data from Polisen, SMHI, and Krisinformation.
+6. The frontend renders the resulting alerts in list and map views.
 
 ### Subscription Flow
 
@@ -87,6 +176,18 @@ NordAlert is split into a React frontend, a Spring Boot backend running on AWS L
 4. SES sends a verification email to the subscriber.
 5. Once SES reports that address as verified, NordAlert treats the subscription as `confirmed`.
 6. The scheduled dispatcher fetches confirmed subscriptions, filters new alerts, and sends matching emails through SES.
+
+### Why This Architecture Works
+
+This architecture works well for NordAlert because it matches the system’s actual behavior:
+
+- API traffic is request-driven
+- subscription delivery is scheduled
+- the frontend is static
+- alert volume can spike during incidents
+- most of the system does not need always-on compute
+
+The serverless approach reduces infrastructure management and keeps the engineering focus on product behavior such as alert normalization, map rendering, filtering, and delivery workflows.
 
 ## Development
 
