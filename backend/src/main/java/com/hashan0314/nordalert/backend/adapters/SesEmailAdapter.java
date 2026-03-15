@@ -4,11 +4,15 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import com.hashan0314.nordalert.backend.config.SubscriptionProperties;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
+import software.amazon.awssdk.services.sesv2.model.AlreadyExistsException;
 import software.amazon.awssdk.services.sesv2.model.Body;
 import software.amazon.awssdk.services.sesv2.model.Content;
+import software.amazon.awssdk.services.sesv2.model.CreateEmailIdentityRequest;
 import software.amazon.awssdk.services.sesv2.model.Destination;
 import software.amazon.awssdk.services.sesv2.model.EmailContent;
+import software.amazon.awssdk.services.sesv2.model.GetEmailIdentityRequest;
 import software.amazon.awssdk.services.sesv2.model.Message;
+import software.amazon.awssdk.services.sesv2.model.NotFoundException;
 import software.amazon.awssdk.services.sesv2.model.SendEmailRequest;
 
 @Component
@@ -20,6 +24,26 @@ public class SesEmailAdapter {
   public SesEmailAdapter(SesV2Client sesV2Client, SubscriptionProperties subscriptionProperties) {
     this.sesV2Client = sesV2Client;
     this.subscriptionProperties = subscriptionProperties;
+  }
+
+  public void ensureEmailIdentity(String email) {
+    try {
+      sesV2Client.createEmailIdentity(CreateEmailIdentityRequest.builder()
+          .emailIdentity(email)
+          .build());
+    } catch (AlreadyExistsException ignored) {
+      // Identity already exists or is already in verification flow.
+    }
+  }
+
+  public boolean isEmailIdentityVerified(String email) {
+    try {
+      return "SUCCESS".equalsIgnoreCase(sesV2Client.getEmailIdentity(GetEmailIdentityRequest.builder()
+          .emailIdentity(email)
+          .build()).verificationStatusAsString());
+    } catch (NotFoundException e) {
+      return false;
+    }
   }
 
   public void sendEmail(String recipient, String subject, String textBody, String htmlBody) {

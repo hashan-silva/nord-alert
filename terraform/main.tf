@@ -100,10 +100,12 @@ resource "aws_iam_role_policy" "lambda_app" {
       {
         Effect = "Allow"
         Action = [
+          "ses:CreateEmailIdentity",
+          "ses:GetEmailIdentity",
           "ses:SendEmail",
           "ses:SendRawEmail"
         ]
-        Resource = aws_ses_email_identity.subscription_sender.arn
+        Resource = "*"
       }
     ]
   })

@@ -9,7 +9,10 @@ public record AlertSubscription(
     List<String> counties,
     Severity severity,
     List<AlertSource> sources,
+    SubscriptionStatus status,
+    String confirmationToken,
     Instant createdAt,
+    Instant confirmedAt,
     Instant lastNotifiedAt
 ) {
 }

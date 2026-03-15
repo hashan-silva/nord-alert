@@ -198,7 +198,9 @@ function App() {
         severity: subscriptionSeverity,
         sources: subscriptionSources
       });
-      setSubscriptionSuccess(`Subscription created for ${subscription.email}`);
+      setSubscriptionSuccess(
+        `Subscription created for ${subscription.email}. Check the AWS SES verification email to activate alert delivery.`
+      );
       setSubscriptionEmail('');
       setSubscriptionDialogOpen(false);
     } catch (nextError) {
@@ -507,8 +509,8 @@ function App() {
           <DialogContent dividers>
             <Stack spacing={2.5} pt={1}>
               <Typography color="text.secondary" variant="body2">
-                Store a recurring alert subscription and let the scheduled backend email new
-                matches.
+                Store a recurring alert subscription. AWS SES will send a verification email
+                before alert delivery is activated.
               </Typography>
 
               {subscriptionError && <Alert severity="error">{subscriptionError}</Alert>}
