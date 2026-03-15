@@ -18,6 +18,7 @@ import com.hashan0314.nordalert.backend.config.SubscriptionProperties;
 import com.hashan0314.nordalert.backend.models.AlertSource;
 import com.hashan0314.nordalert.backend.models.AlertSubscription;
 import com.hashan0314.nordalert.backend.models.Severity;
+import com.hashan0314.nordalert.backend.models.SubscriptionStatus;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
@@ -43,8 +44,11 @@ class DynamoDbSubscriptionAdapterTest {
         List.of("Stockholms län"),
         Severity.HIGH,
         List.of(AlertSource.POLISEN, AlertSource.SMHI),
+        SubscriptionStatus.PENDING,
+        "token-1",
         Instant.parse("2026-03-13T10:00:00Z"),
-        Instant.parse("2026-03-13T11:00:00Z")
+        null,
+        null
     );
 
     adapter.save(subscription);
@@ -57,6 +61,8 @@ class DynamoDbSubscriptionAdapterTest {
     assertEquals("sub-1", request.item().get("id").s());
     assertEquals("ops@example.com", request.item().get("email").s());
     assertEquals("high", request.item().get("severity").s());
+    assertEquals("pending", request.item().get("status").s());
+    assertEquals("token-1", request.item().get("confirmationToken").s());
     assertEquals(List.of("polisen", "smhi"),
         request.item().get("sources").l().stream().map(AttributeValue::s).toList());
   }
@@ -68,7 +74,7 @@ class DynamoDbSubscriptionAdapterTest {
     DynamoDbSubscriptionAdapter adapter = new DynamoDbSubscriptionAdapter(dynamoDbClient, properties);
 
     when(dynamoDbClient.scan(any(ScanRequest.class))).thenReturn(ScanResponse.builder()
-        .items(Map.of(
+        .items(List.of(Map.of(
             "id", AttributeValue.builder().s("sub-1").build(),
             "email", AttributeValue.builder().s("ops@example.com").build(),
             "counties", AttributeValue.builder().l(
@@ -78,8 +84,10 @@ class DynamoDbSubscriptionAdapterTest {
             "sources", AttributeValue.builder().l(
                 AttributeValue.builder().s("polisen").build()
             ).build(),
+            "status", AttributeValue.builder().s("pending").build(),
+            "confirmationToken", AttributeValue.builder().s("token-1").build(),
             "createdAt", AttributeValue.builder().s("2026-03-13T10:00:00Z").build()
-        ))
+        )))
         .build());
 
     List<AlertSubscription> subscriptions = adapter.findAll();
@@ -89,6 +97,8 @@ class DynamoDbSubscriptionAdapterTest {
     assertEquals(List.of("Stockholms län"), subscriptions.get(0).counties());
     assertEquals(Severity.MEDIUM, subscriptions.get(0).severity());
     assertEquals(List.of(AlertSource.POLISEN), subscriptions.get(0).sources());
+    assertEquals(SubscriptionStatus.PENDING, subscriptions.get(0).status());
+    assertEquals("token-1", subscriptions.get(0).confirmationToken());
     assertNull(subscriptions.get(0).lastNotifiedAt());
   }
 
@@ -108,5 +118,20 @@ class DynamoDbSubscriptionAdapterTest {
     assertEquals("sub-1", request.key().get("id").s());
     assertEquals("2026-03-13T11:00:00Z",
         request.expressionAttributeValues().get(":lastNotifiedAt").s());
+  }
+
+  @Test
+  void shouldConfirmSubscription() {
+    SubscriptionProperties properties = new SubscriptionProperties();
+    properties.setTableName("subscriptions");
+    DynamoDbSubscriptionAdapter adapter = new DynamoDbSubscriptionAdapter(dynamoDbClient, properties);
+
+    adapter.confirmSubscription("sub-1", Instant.parse("2026-03-13T11:00:00Z"));
+
+    ArgumentCaptor<UpdateItemRequest> captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
+    verify(dynamoDbClient).updateItem(captor.capture());
+
+    UpdateItemRequest request = captor.getValue();
+    assertEquals("confirmed", request.expressionAttributeValues().get(":status").s());
   }
 }

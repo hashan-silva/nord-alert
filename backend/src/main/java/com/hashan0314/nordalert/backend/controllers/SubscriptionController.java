@@ -9,9 +9,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -58,6 +61,29 @@ public class SubscriptionController {
   public AlertSubscription createSubscription(@Valid @RequestBody CreateAlertSubscriptionRequest request) {
     try {
       return subscriptionService.createSubscription(request);
+    } catch (IllegalArgumentException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+    }
+  }
+
+  @GetMapping(value = "/subscriptions/confirm", produces = MediaType.TEXT_HTML_VALUE)
+  @Operation(
+      summary = "Confirm email subscription",
+      responses = {
+        @ApiResponse(responseCode = "200", description = "Subscription confirmed"),
+        @ApiResponse(responseCode = "400", description = "Invalid confirmation token")
+      }
+  )
+  public ResponseEntity<String> confirmSubscription(@RequestParam String token) {
+    try {
+      AlertSubscription subscription = subscriptionService.confirmSubscription(token);
+      String html = """
+          <html><body style="font-family:Arial,sans-serif;color:#15324b;padding:32px;">
+            <h2>Subscription confirmed</h2>
+            <p>Email alerts are now active for <strong>%s</strong>.</p>
+          </body></html>
+          """.formatted(subscription.email());
+      return ResponseEntity.ok(html);
     } catch (IllegalArgumentException e) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
     }

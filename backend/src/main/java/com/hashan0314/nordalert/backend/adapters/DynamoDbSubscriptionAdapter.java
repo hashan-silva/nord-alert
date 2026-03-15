@@ -10,6 +10,7 @@ import com.hashan0314.nordalert.backend.config.SubscriptionProperties;
 import com.hashan0314.nordalert.backend.models.AlertSource;
 import com.hashan0314.nordalert.backend.models.AlertSubscription;
 import com.hashan0314.nordalert.backend.models.Severity;
+import com.hashan0314.nordalert.backend.models.SubscriptionStatus;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
@@ -24,7 +25,10 @@ public class DynamoDbSubscriptionAdapter {
   private static final String EMAIL_ATTRIBUTE = "email";
   private static final String ID_ATTRIBUTE = "id";
   private static final String LAST_NOTIFIED_AT_ATTRIBUTE = "lastNotifiedAt";
+  private static final String CONFIRMED_AT_ATTRIBUTE = "confirmedAt";
+  private static final String CONFIRMATION_TOKEN_ATTRIBUTE = "confirmationToken";
   private static final String SEVERITY_ATTRIBUTE = "severity";
+  private static final String STATUS_ATTRIBUTE = "status";
   private static final String SOURCES_ATTRIBUTE = "sources";
 
   private final DynamoDbClient dynamoDbClient;
@@ -68,12 +72,41 @@ public class DynamoDbSubscriptionAdapter {
         .build());
   }
 
+  public AlertSubscription findByConfirmationToken(String token) {
+    return findAll().stream()
+        .filter(subscription -> token.equals(subscription.confirmationToken()))
+        .findFirst()
+        .orElse(null);
+  }
+
+  public void confirmSubscription(String subscriptionId, Instant confirmedAt) {
+    dynamoDbClient.updateItem(UpdateItemRequest.builder()
+        .tableName(subscriptionProperties.getTableName())
+        .key(Map.of(ID_ATTRIBUTE, stringAttribute(subscriptionId)))
+        .updateExpression(
+            "SET #status = :status, #confirmedAt = :confirmedAt, #lastNotifiedAt = :lastNotifiedAt REMOVE #confirmationToken"
+        )
+        .expressionAttributeNames(Map.of(
+            "#status", STATUS_ATTRIBUTE,
+            "#confirmedAt", CONFIRMED_AT_ATTRIBUTE,
+            "#lastNotifiedAt", LAST_NOTIFIED_AT_ATTRIBUTE,
+            "#confirmationToken", CONFIRMATION_TOKEN_ATTRIBUTE
+        ))
+        .expressionAttributeValues(Map.of(
+            ":status", stringAttribute("confirmed"),
+            ":confirmedAt", stringAttribute(confirmedAt.toString()),
+            ":lastNotifiedAt", stringAttribute(confirmedAt.toString())
+        ))
+        .build());
+  }
+
   private Map<String, AttributeValue> toItem(AlertSubscription subscription) {
     Map<String, AttributeValue> item = new HashMap<>();
     item.put(ID_ATTRIBUTE, stringAttribute(subscription.id()));
     item.put(EMAIL_ATTRIBUTE, stringAttribute(subscription.email()));
     item.put(CREATED_AT_ATTRIBUTE, stringAttribute(subscription.createdAt().toString()));
     item.put(COUNTIES_ATTRIBUTE, stringListAttribute(subscription.counties()));
+    item.put(STATUS_ATTRIBUTE, stringAttribute(subscription.status().value()));
     item.put(SOURCES_ATTRIBUTE, stringListAttribute(subscription.sources().stream()
         .map(AlertSource::value)
         .toList()));
@@ -84,6 +117,14 @@ public class DynamoDbSubscriptionAdapter {
 
     if (subscription.lastNotifiedAt() != null) {
       item.put(LAST_NOTIFIED_AT_ATTRIBUTE, stringAttribute(subscription.lastNotifiedAt().toString()));
+    }
+
+    if (subscription.confirmedAt() != null) {
+      item.put(CONFIRMED_AT_ATTRIBUTE, stringAttribute(subscription.confirmedAt().toString()));
+    }
+
+    if (subscription.confirmationToken() != null && !subscription.confirmationToken().isBlank()) {
+      item.put(CONFIRMATION_TOKEN_ATTRIBUTE, stringAttribute(subscription.confirmationToken()));
     }
 
     return item;
@@ -98,7 +139,16 @@ public class DynamoDbSubscriptionAdapter {
         stringList(item.get(SOURCES_ATTRIBUTE)).stream()
             .map(AlertSource::fromValue)
             .toList(),
+        item.containsKey(STATUS_ATTRIBUTE)
+            ? SubscriptionStatus.fromValue(item.get(STATUS_ATTRIBUTE).s())
+            : SubscriptionStatus.PENDING,
+        item.containsKey(CONFIRMATION_TOKEN_ATTRIBUTE)
+            ? item.get(CONFIRMATION_TOKEN_ATTRIBUTE).s()
+            : null,
         Instant.parse(item.get(CREATED_AT_ATTRIBUTE).s()),
+        item.containsKey(CONFIRMED_AT_ATTRIBUTE)
+            ? Instant.parse(item.get(CONFIRMED_AT_ATTRIBUTE).s())
+            : null,
         item.containsKey(LAST_NOTIFIED_AT_ATTRIBUTE)
             ? Instant.parse(item.get(LAST_NOTIFIED_AT_ATTRIBUTE).s())
             : null

@@ -49,6 +49,37 @@ This repository is a monorepo containing the web dashboard, backend service, and
 - **/backend/**: Contains the Java 17 backend service.
 - **/terraform/**: Contains AWS infrastructure, including Lambda, API Gateway, S3, and CloudFront.
 
+## Architecture
+
+NordAlert is split into a React frontend, a Spring Boot backend running on AWS Lambda, and Terraform-managed AWS infrastructure.
+
+- **Web dashboard**
+  - The React app loads alerts from the backend `/alerts` API and county metadata from `/counties`.
+  - Users can filter alerts by counties, severity, sources, and date range.
+  - The map view renders point alerts and polygon-based warning areas directly in the browser with Leaflet and OpenStreetMap tiles.
+
+- **Backend API**
+  - `adapters/` fetch and normalize external source data from Polisen, SMHI, Krisinformation, and SCB.
+  - `services/` aggregate alerts, resolve county data, and handle subscription workflows.
+  - `controllers/` expose the HTTP API for alerts, counties, health, and subscriptions.
+  - The backend exposes aggregated alert items with optional coordinates and GeoJSON so the frontend can render both list and map views.
+
+- **AWS serverless platform**
+  - API requests flow through API Gateway to the main backend Lambda.
+  - The React frontend is deployed to S3 and served globally through CloudFront.
+  - Email subscriptions are stored in DynamoDB.
+  - SES is used for sender identity management, recipient verification, and outbound alert email delivery.
+  - EventBridge triggers a scheduled Lambda dispatcher that checks confirmed subscriptions and sends new matching alerts.
+
+### Subscription Flow
+
+1. A user creates a subscription from the web dashboard.
+2. The backend stores the subscription in DynamoDB with `pending` status.
+3. The backend requests an SES email identity for the recipient address.
+4. SES sends a verification email to the subscriber.
+5. Once SES reports that address as verified, NordAlert treats the subscription as `confirmed`.
+6. The scheduled dispatcher fetches confirmed subscriptions, filters new alerts, and sends matching emails through SES.
+
 ## Development
 
 ### Backend

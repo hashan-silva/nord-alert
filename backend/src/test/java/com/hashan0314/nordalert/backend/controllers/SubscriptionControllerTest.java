@@ -1,9 +1,11 @@
 package com.hashan0314.nordalert.backend.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.hashan0314.nordalert.backend.models.AlertSource;
 import com.hashan0314.nordalert.backend.models.AlertSubscription;
 import com.hashan0314.nordalert.backend.models.Severity;
+import com.hashan0314.nordalert.backend.models.SubscriptionStatus;
 import com.hashan0314.nordalert.backend.services.SubscriptionService;
 
 @WebMvcTest(SubscriptionController.class)
@@ -37,8 +40,11 @@ class SubscriptionControllerTest {
         List.of("Stockholms län"),
         Severity.MEDIUM,
         List.of(AlertSource.POLISEN),
+        SubscriptionStatus.PENDING,
+        "token-1",
         Instant.parse("2026-03-13T10:00:00Z"),
-        Instant.parse("2026-03-13T10:00:00Z")
+        null,
+        null
     ));
 
     mockMvc.perform(post("/subscriptions")
@@ -53,7 +59,8 @@ class SubscriptionControllerTest {
                 """))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.email").value("ops@example.com"))
-        .andExpect(jsonPath("$.sources[0]").value("polisen"));
+        .andExpect(jsonPath("$.sources[0]").value("polisen"))
+        .andExpect(jsonPath("$.status").value("pending"));
   }
 
   @Test
@@ -77,7 +84,10 @@ class SubscriptionControllerTest {
             List.of(),
             null,
             List.of(),
+            SubscriptionStatus.CONFIRMED,
+            null,
             Instant.parse("2026-03-13T10:00:00Z"),
+            Instant.parse("2026-03-13T10:05:00Z"),
             Instant.parse("2026-03-13T10:00:00Z")
         )
     ));
@@ -86,5 +96,25 @@ class SubscriptionControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(jsonPath("$[0].id").value("sub-1"));
+  }
+
+  @Test
+  void shouldConfirmSubscription() throws Exception {
+    when(subscriptionService.confirmSubscription("token-1")).thenReturn(new AlertSubscription(
+        "sub-1",
+        "ops@example.com",
+        List.of(),
+        null,
+        List.of(),
+        SubscriptionStatus.CONFIRMED,
+        null,
+        Instant.parse("2026-03-13T10:00:00Z"),
+        Instant.parse("2026-03-13T10:05:00Z"),
+        Instant.parse("2026-03-13T10:05:00Z")
+    ));
+
+    mockMvc.perform(get("/subscriptions/confirm").param("token", "token-1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Subscription confirmed")));
   }
 }

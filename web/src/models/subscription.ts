@@ -7,10 +7,13 @@ export interface CreateSubscriptionRequest {
 
 export interface SubscriptionItem {
   counties: string[];
+  confirmationToken?: string;
+  confirmedAt?: string;
   createdAt: string;
   email: string;
   id: string;
   lastNotifiedAt?: string;
   severity?: string;
   sources: string[];
+  status: 'pending' | 'confirmed' | string;
 }

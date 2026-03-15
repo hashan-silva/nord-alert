@@ -11,6 +11,7 @@ import com.hashan0314.nordalert.backend.adapters.SesEmailAdapter;
 import com.hashan0314.nordalert.backend.models.Alert;
 import com.hashan0314.nordalert.backend.models.AlertSubscription;
 import com.hashan0314.nordalert.backend.models.SubscriptionDispatchResult;
+import com.hashan0314.nordalert.backend.models.SubscriptionStatus;
 
 @Service
 public class SubscriptionDispatchService {
@@ -66,6 +67,7 @@ public class SubscriptionDispatchService {
     Instant threshold = subscription.lastNotifiedAt() != null ? subscription.lastNotifiedAt() : subscription.createdAt();
 
     return alerts.stream()
+        .filter(alert -> subscription.status() == SubscriptionStatus.CONFIRMED)
         .filter(alert -> subscription.counties().isEmpty()
             || alert.areas().stream().anyMatch(subscription.counties()::contains))
         .filter(alert -> subscription.severity() == null

@@ -19,6 +19,7 @@ import com.hashan0314.nordalert.backend.models.AlertSource;
 import com.hashan0314.nordalert.backend.models.AlertSubscription;
 import com.hashan0314.nordalert.backend.models.Severity;
 import com.hashan0314.nordalert.backend.models.SubscriptionDispatchResult;
+import com.hashan0314.nordalert.backend.models.SubscriptionStatus;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionDispatchServiceTest {
@@ -43,12 +44,15 @@ class SubscriptionDispatchServiceTest {
     when(subscriptionService.getSubscriptions()).thenReturn(List.of(
         new AlertSubscription(
             "sub-1",
-            "ops@example.com",
-            List.of("Stockholms län"),
-            Severity.MEDIUM,
-            List.of(AlertSource.POLISEN),
-            Instant.parse("2026-03-13T09:00:00Z"),
-            Instant.parse("2026-03-13T09:30:00Z")
+        "ops@example.com",
+        List.of("Stockholms län"),
+        Severity.MEDIUM,
+        List.of(AlertSource.POLISEN),
+        SubscriptionStatus.CONFIRMED,
+        null,
+        Instant.parse("2026-03-13T09:00:00Z"),
+        Instant.parse("2026-03-13T09:30:00Z"),
+        Instant.parse("2026-03-13T09:30:00Z")
         )
     ));
     when(alertAggregationService.fetchAllAlerts()).thenReturn(List.of(
@@ -99,12 +103,15 @@ class SubscriptionDispatchServiceTest {
     when(subscriptionService.getSubscriptions()).thenReturn(List.of(
         new AlertSubscription(
             "sub-1",
-            "ops@example.com",
-            List.of("Skåne län"),
-            Severity.HIGH,
-            List.of(AlertSource.POLISEN),
-            Instant.parse("2026-03-13T09:00:00Z"),
-            Instant.parse("2026-03-13T09:30:00Z")
+        "ops@example.com",
+        List.of("Skåne län"),
+        Severity.HIGH,
+        List.of(AlertSource.POLISEN),
+        SubscriptionStatus.CONFIRMED,
+        null,
+        Instant.parse("2026-03-13T09:00:00Z"),
+        Instant.parse("2026-03-13T09:30:00Z"),
+        Instant.parse("2026-03-13T09:30:00Z")
         )
     ));
     when(alertAggregationService.fetchAllAlerts()).thenReturn(List.of(
@@ -115,6 +122,51 @@ class SubscriptionDispatchServiceTest {
             "Description",
             List.of("Stockholms län"),
             Severity.MEDIUM,
+            Instant.parse("2026-03-13T10:00:00Z"),
+            "https://example.com/p-1",
+            null,
+            null,
+            null
+        )
+    ));
+
+    SubscriptionDispatchResult result = service.dispatchPendingAlerts();
+
+    assertEquals(1, result.processedSubscriptions());
+    assertEquals(0, result.emailedSubscriptions());
+    verify(sesEmailAdapter, never()).sendEmail(anyString(), anyString(), anyString(), anyString());
+  }
+
+  @Test
+  void shouldSkipPendingSubscriptions() {
+    SubscriptionDispatchService service = new SubscriptionDispatchService(
+        alertAggregationService,
+        subscriptionService,
+        sesEmailAdapter
+    );
+
+    when(subscriptionService.getSubscriptions()).thenReturn(List.of(
+        new AlertSubscription(
+            "sub-1",
+            "ops@example.com",
+            List.of("Stockholms län"),
+            Severity.LOW,
+            List.of(AlertSource.POLISEN),
+            SubscriptionStatus.PENDING,
+            "token-1",
+            Instant.parse("2026-03-13T09:00:00Z"),
+            null,
+            null
+        )
+    ));
+    when(alertAggregationService.fetchAllAlerts()).thenReturn(List.of(
+        new Alert(
+            AlertSource.POLISEN,
+            "p-1",
+            "Police headline",
+            "Description",
+            List.of("Stockholms län"),
+            Severity.HIGH,
             Instant.parse("2026-03-13T10:00:00Z"),
             "https://example.com/p-1",
             null,
