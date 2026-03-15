@@ -6,6 +6,8 @@ Current application versions:
 - Backend: `1.1.1`
 - Frontend: `1.1.1`
 
+![NordAlert cover image](docs/cover-image.png)
+
 [![Build and Deploy Backend](https://github.com/hashan-silva/nord-alert/actions/workflows/deploy.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/deploy.yml)
 [![Build and Analyze](https://github.com/hashan-silva/nord-alert/actions/workflows/build.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/build.yml)
 [![CodeQL](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/github-code-scanning/codeql)
@@ -56,6 +58,8 @@ This repository is a monorepo containing the web dashboard, backend service, and
 ## Architecture
 
 NordAlert is split into a React frontend, a Spring Boot backend running on AWS Lambda, and Terraform-managed AWS infrastructure.
+
+![NordAlert architecture](docs/architecture.png)
 
 - **Web dashboard**
   - The React app loads alerts from the backend `/alerts` API and county metadata from `/counties`.
