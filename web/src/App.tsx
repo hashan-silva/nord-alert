@@ -4,15 +4,17 @@ import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import {
   Alert,
   CircularProgress,
-  ToggleButton,
-  ToggleButtonGroup,
   Box,
   Button,
   Checkbox,
   Container,
-  FormLabel,
   FormControl,
+  FormLabel,
   Grid,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   InputLabel,
   ListItemText,
   MenuItem,
@@ -22,6 +24,8 @@ import {
   Select,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography
 } from '@mui/material';
 import { type SelectChangeEvent } from '@mui/material/Select';
@@ -68,6 +72,7 @@ function App() {
   const [subscriptionSaving, setSubscriptionSaving] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState('');
   const [subscriptionSuccess, setSubscriptionSuccess] = useState('');
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +200,7 @@ function App() {
       });
       setSubscriptionSuccess(`Subscription created for ${subscription.email}`);
       setSubscriptionEmail('');
+      setSubscriptionDialogOpen(false);
     } catch (nextError) {
       setSubscriptionError(
         nextError instanceof Error ? nextError.message : 'Unable to create subscription'
@@ -384,120 +390,17 @@ function App() {
                   Reset filters
                 </Button>
 
-                <Box className="subscription-card">
-                  <Stack spacing={2.5}>
-                    <Box>
-                      <Typography variant="h4">Email subscription</Typography>
-                      <Typography color="text.secondary" variant="body2">
-                        Store a recurring alert subscription and let the scheduled backend email
-                        new matches.
-                      </Typography>
-                    </Box>
+                {subscriptionSuccess && <Alert severity="success">{subscriptionSuccess}</Alert>}
 
-                    {subscriptionError && <Alert severity="error">{subscriptionError}</Alert>}
-                    {subscriptionSuccess && <Alert severity="success">{subscriptionSuccess}</Alert>}
-
-                    <TextField
-                      label="Email"
-                      type="email"
-                      value={subscriptionEmail}
-                      onChange={(event) => setSubscriptionEmail(event.target.value)}
-                      fullWidth
-                    />
-
-                    <FormControl fullWidth>
-                      <InputLabel id="subscription-resource-select-label">Resources</InputLabel>
-                      <Select
-                        multiple
-                        labelId="subscription-resource-select-label"
-                        input={<OutlinedInput label="Resources" />}
-                        value={subscriptionSources}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setSubscriptionSources(
-                            typeof value === 'string' ? value.split(',') : value
-                          );
-                        }}
-                        renderValue={(selected) =>
-                          selected.length === 0
-                            ? 'All resources'
-                            : selected
-                                .map(
-                                  (value) =>
-                                    resourceLabels[normalizeResourceKey(value)] || value
-                                )
-                                .join(', ')
-                        }
-                      >
-                        {allResourceOptions.map((option) => (
-                          <MenuItem key={option} value={option}>
-                            <Checkbox checked={subscriptionSources.includes(option)} />
-                            <ListItemText
-                              primary={resourceLabels[normalizeResourceKey(option)] || option}
-                            />
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <FormControl fullWidth>
-                      <InputLabel id="subscription-county-select-label">Counties</InputLabel>
-                      <Select
-                        labelId="subscription-county-select-label"
-                        multiple
-                        input={<OutlinedInput label="Counties" />}
-                        value={subscriptionCounties}
-                        onChange={handleSubscriptionCountyChange}
-                        renderValue={(selected) =>
-                          selected.length === 0 ? 'All counties' : selected.join(', ')
-                        }
-                      >
-                        {countyOptions.map((option) => (
-                          <MenuItem key={`subscription-${option.code}`} value={option.name}>
-                            <Checkbox checked={subscriptionCounties.includes(option.name)} />
-                            <ListItemText primary={option.name} />
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <FormControl fullWidth>
-                      <InputLabel id="subscription-severity-select-label">Severity</InputLabel>
-                      <Select
-                        labelId="subscription-severity-select-label"
-                        label="Severity"
-                        value={subscriptionSeverity}
-                        onChange={(event) => setSubscriptionSeverity(event.target.value)}
-                      >
-                        {severityOptions.map((option) => (
-                          <MenuItem key={`subscription-${option.label}`} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                      <Button
-                        variant="outlined"
-                        onClick={() => {
-                          setSubscriptionCounties(selectedCounties);
-                          setSubscriptionSeverity(severity);
-                          setSubscriptionSources(selectedResources);
-                        }}
-                      >
-                        Use current filters
-                      </Button>
-                      <Button
-                        variant="contained"
-                        onClick={handleCreateSubscription}
-                        disabled={subscriptionSaving || subscriptionEmail.trim().length === 0}
-                      >
-                        {subscriptionSaving ? 'Saving...' : 'Subscribe'}
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </Box>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setSubscriptionError('');
+                    setSubscriptionDialogOpen(true);
+                  }}
+                >
+                  Email subscription
+                </Button>
               </Stack>
             </Paper>
           </Grid>
@@ -589,6 +492,133 @@ function App() {
             NordAlert © Shermal Hashan Silva · Web {webVersion} · Backend {backendVersion}
           </Typography>
         </Box>
+
+        <Dialog
+          open={subscriptionDialogOpen}
+          onClose={() => {
+            if (!subscriptionSaving) {
+              setSubscriptionDialogOpen(false);
+            }
+          }}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Email subscription</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2.5} pt={1}>
+              <Typography color="text.secondary" variant="body2">
+                Store a recurring alert subscription and let the scheduled backend email new
+                matches.
+              </Typography>
+
+              {subscriptionError && <Alert severity="error">{subscriptionError}</Alert>}
+
+              <TextField
+                label="Email"
+                type="email"
+                value={subscriptionEmail}
+                onChange={(event) => setSubscriptionEmail(event.target.value)}
+                fullWidth
+              />
+
+              <FormControl fullWidth>
+                <InputLabel id="subscription-resource-select-label">Resources</InputLabel>
+                <Select
+                  multiple
+                  labelId="subscription-resource-select-label"
+                  input={<OutlinedInput label="Resources" />}
+                  value={subscriptionSources}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSubscriptionSources(typeof value === 'string' ? value.split(',') : value);
+                  }}
+                  renderValue={(selected) =>
+                    selected.length === 0
+                      ? 'All resources'
+                      : selected
+                          .map((value) => resourceLabels[normalizeResourceKey(value)] || value)
+                          .join(', ')
+                  }
+                >
+                  {allResourceOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      <Checkbox checked={subscriptionSources.includes(option)} />
+                      <ListItemText
+                        primary={resourceLabels[normalizeResourceKey(option)] || option}
+                      />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth>
+                <InputLabel id="subscription-county-select-label">Counties</InputLabel>
+                <Select
+                  labelId="subscription-county-select-label"
+                  multiple
+                  input={<OutlinedInput label="Counties" />}
+                  value={subscriptionCounties}
+                  onChange={handleSubscriptionCountyChange}
+                  renderValue={(selected) =>
+                    selected.length === 0 ? 'All counties' : selected.join(', ')
+                  }
+                >
+                  {countyOptions.map((option) => (
+                    <MenuItem key={`subscription-${option.code}`} value={option.name}>
+                      <Checkbox checked={subscriptionCounties.includes(option.name)} />
+                      <ListItemText primary={option.name} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth>
+                <InputLabel id="subscription-severity-select-label">Severity</InputLabel>
+                <Select
+                  labelId="subscription-severity-select-label"
+                  label="Severity"
+                  value={subscriptionSeverity}
+                  onChange={(event) => setSubscriptionSeverity(event.target.value)}
+                >
+                  {severityOptions.map((option) => (
+                    <MenuItem key={`subscription-${option.label}`} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setSubscriptionCounties(selectedCounties);
+                setSubscriptionSeverity(severity);
+                setSubscriptionSources(selectedResources);
+              }}
+            >
+              Use current filters
+            </Button>
+            <Box sx={{ flex: 1 }} />
+            <Button
+              onClick={() => {
+                if (!subscriptionSaving) {
+                  setSubscriptionDialogOpen(false);
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleCreateSubscription}
+              disabled={subscriptionSaving || subscriptionEmail.trim().length === 0}
+            >
+              {subscriptionSaving ? 'Saving...' : 'Subscribe'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </Box>
   );
