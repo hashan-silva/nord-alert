@@ -304,7 +304,7 @@ function App() {
                             .join(', ')
                     }
                   >
-                    {resourceOptions.map((option) => (
+                    {allResourceOptions.map((option) => (
                       <MenuItem key={option} value={option}>
                         <Checkbox checked={selectedResources.includes(option)} />
                         <ListItemText
