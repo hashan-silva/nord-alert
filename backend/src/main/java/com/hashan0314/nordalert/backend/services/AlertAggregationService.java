@@ -1,6 +1,7 @@
 package com.hashan0314.nordalert.backend.services;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -72,7 +73,7 @@ public class AlertAggregationService {
           AlertSource.KRISINFORMATION,
           item.id(),
           item.headline(),
-          emptyToNull(item.preamble()),
+          emptyToNull(krisinformationDescription(item)),
           item.counties(),
           Severity.INFO,
           item.publishedAt(),
@@ -97,5 +98,22 @@ public class AlertAggregationService {
 
   private static String emptyToNull(String value) {
     return value == null || value.isBlank() ? null : value;
+  }
+
+  private static String krisinformationDescription(KrisinformationItem item) {
+    LinkedHashSet<String> parts = new LinkedHashSet<>();
+    addIfPresent(parts, item.bodyText());
+    addIfPresent(parts, item.preamble());
+    addIfPresent(parts, item.pushMessage());
+    return String.join("\n\n", parts);
+  }
+
+  private static void addIfPresent(LinkedHashSet<String> parts, String value) {
+    if (value != null) {
+      String normalized = value.trim();
+      if (!normalized.isBlank()) {
+        parts.add(normalized);
+      }
+    }
   }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import org.jsoup.Jsoup;
 import org.springframework.stereotype.Component;
 import com.hashan0314.nordalert.backend.config.PublicApiProperties;
 import com.hashan0314.nordalert.backend.models.KrisinformationItem;
@@ -12,6 +13,7 @@ import com.hashan0314.nordalert.backend.models.KrisinformationItem;
 public class KrisinformationAdapter {
 
   private static final String PUSH_MESSAGE_FIELD = "pushMessage";
+  private static final String PUSH_MESSAGE_PASCAL_CASE_FIELD = "PushMessage";
 
   private final HttpJsonClient httpJsonClient;
   private final PublicApiProperties publicApiProperties;
@@ -22,13 +24,8 @@ public class KrisinformationAdapter {
   }
 
   public List<KrisinformationItem> fetchKrisinformationItems() {
-    JsonNode news = httpJsonClient.getJson(publicApiProperties.getKrisinformation().getNewsUrl());
-    JsonNode vmas = httpJsonClient.getJson(publicApiProperties.getKrisinformation().getVmasUrl());
-
-    List<KrisinformationItem> items = new ArrayList<>();
-    items.addAll(normalize(news));
-    items.addAll(normalize(vmas));
-    return items;
+    JsonNode aggregatedFeed = httpJsonClient.getJson(publicApiProperties.getKrisinformation().getAggregatedFeedUrl());
+    return normalize(aggregatedFeed);
   }
 
   private static List<KrisinformationItem> normalize(JsonNode items) {
@@ -39,23 +36,42 @@ public class KrisinformationAdapter {
     List<KrisinformationItem> normalized = new ArrayList<>();
     for (JsonNode item : items) {
       normalized.add(new KrisinformationItem(
-          item.path("id").asText(""),
-          firstText(item.path("headline"), item.path("title")),
-          item.path("preamble").asText(""),
-          collectCounties(item.path("counties")),
-          firstInstant(item.path("published").asText(null), item.path("date").asText(null)),
-          firstText(item.path("web"), item.path("url")),
-          item.path(PUSH_MESSAGE_FIELD).isMissingNode() || item.path(PUSH_MESSAGE_FIELD).isNull()
+          firstText(item.path("id"), item.path("Identifier")),
+          normalizedText(item.path("headline"), item.path("Headline"), item.path("title"), item.path("Title")),
+          normalizedText(item.path("preamble"), item.path("Preamble")),
+          normalizedText(item.path("bodyText"), item.path("BodyText")),
+          collectAreas(item),
+          firstInstant(
+              item.path("published").asText(null),
+              item.path("Published").asText(null),
+              item.path("date").asText(null),
+              item.path("Updated").asText(null)
+          ),
+          normalizedText(item.path("web"), item.path("Web"), item.path("url"), item.path("Url")),
+          isMissingOrNull(item.path(PUSH_MESSAGE_FIELD), item.path(PUSH_MESSAGE_PASCAL_CASE_FIELD))
               ? null
-              : item.path(PUSH_MESSAGE_FIELD).asText("")
+              : normalizedText(item.path(PUSH_MESSAGE_FIELD), item.path(PUSH_MESSAGE_PASCAL_CASE_FIELD))
       ));
     }
     return normalized;
   }
 
-  private static List<String> collectCounties(JsonNode countiesNode) {
+  private static List<String> collectAreas(JsonNode item) {
+    JsonNode countiesNode = item.path("counties");
     if (!countiesNode.isArray()) {
-      return List.of();
+      JsonNode areaNode = item.path("Area");
+      if (!areaNode.isArray()) {
+        return List.of();
+      }
+
+      List<String> areas = new ArrayList<>();
+      for (JsonNode area : areaNode) {
+        String description = firstText(area.path("Description"), area.path("description"));
+        if (!description.isBlank()) {
+          areas.add(description);
+        }
+      }
+      return areas;
     }
 
     List<String> counties = new ArrayList<>();
@@ -80,6 +96,33 @@ public class KrisinformationAdapter {
       }
     }
     return "";
+  }
+
+  private static String normalizedText(JsonNode... nodes) {
+    return normalizeHtmlText(firstText(nodes));
+  }
+
+  private static String normalizeHtmlText(String value) {
+    if (value == null || value.isBlank()) {
+      return "";
+    }
+
+    String text = Jsoup.parse(value).text();
+    return text
+        .replace("\u00A0", " ")
+        .replaceAll("\\s*\\n\\s*", "\n")
+        .replaceAll("(?m)[ \\t]+", " ")
+        .replaceAll("\\n{3,}", "\n\n")
+        .trim();
+  }
+
+  private static boolean isMissingOrNull(JsonNode... nodes) {
+    for (JsonNode node : nodes) {
+      if (!node.isMissingNode() && !node.isNull()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static Instant firstInstant(String... values) {
