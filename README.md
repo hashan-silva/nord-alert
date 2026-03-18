@@ -250,7 +250,7 @@ The backend retrieves information from a number of official Swedish services:
 
 - **Polisen events** – https://polisen.se/api/events
 - **SMHI impact-based warnings** – https://opendata-download-warnings.smhi.se/warnings/objects
-- **Krisinformation** – https://api.krisinformation.se/v3/news and https://api.krisinformation.se/v3/vmas
+- **Krisinformation** – https://api.krisinformation.se/v2/aggregatedfeed
 - **SCB PxWeb** – region lists (county and municipality codes/names)
 - **County Administrative Boards ArcGIS** – GeoJSON polygons for counties and municipalities
 
