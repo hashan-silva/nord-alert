@@ -94,7 +94,9 @@ function AlertList({ alerts }: AlertListProps) {
                   </Link>
                 )}
               </Stack>
-              <Typography variant="body1">{alert.description}</Typography>
+              <Typography className="alert-list__description" variant="body1">
+                {alert.description}
+              </Typography>
             </Stack>
           </ListItem>
           {index < alerts.length - 1 && <Divider component="li" />}

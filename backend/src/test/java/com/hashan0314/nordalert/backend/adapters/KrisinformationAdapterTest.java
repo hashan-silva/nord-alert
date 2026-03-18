@@ -33,8 +33,7 @@ class KrisinformationAdapterTest {
 
   private static PublicApiProperties createProperties() {
     KrisinformationApiProperties krisinformation = new KrisinformationApiProperties();
-    krisinformation.setNewsUrl("https://api.krisinformation.se/v3/news");
-    krisinformation.setVmasUrl("https://api.krisinformation.se/v3/vmas");
+    krisinformation.setAggregatedFeedUrl("https://api.krisinformation.se/v2/aggregatedfeed");
 
     PublicApiProperties properties = new PublicApiProperties();
     properties.setKrisinformation(krisinformation);
@@ -42,22 +41,19 @@ class KrisinformationAdapterTest {
   }
 
   @Test
-  void shouldMergeNewsAndVmasItems() throws Exception {
-    when(httpJsonClient.getJson("https://api.krisinformation.se/v3/news")).thenReturn(objectMapper.readTree("""
+  void shouldNormalizeAggregatedFeedItems() throws Exception {
+    when(httpJsonClient.getJson("https://api.krisinformation.se/v2/aggregatedfeed")).thenReturn(objectMapper.readTree("""
         [
           {
-            "id": "news-1",
-            "headline": "News headline",
-            "preamble": "News preamble",
-            "counties": ["Stockholms län"],
-            "published": "2026-03-12T16:52:18Z",
-            "web": "https://example.com/news-1",
-            "pushMessage": "Push text"
-          }
-        ]
-        """));
-    when(httpJsonClient.getJson("https://api.krisinformation.se/v3/vmas")).thenReturn(objectMapper.readTree("""
-        [
+            "Identifier": "news-1",
+            "Headline": "News headline",
+            "Preamble": "News preamble",
+            "BodyText": "Full crisis message",
+            "Area": [{ "Description": "Stockholms län" }],
+            "Published": "2026-03-12T16:52:18Z",
+            "Web": "https://example.com/news-1",
+            "PushMessage": "Push text"
+          },
           {
             "id": "vma-1",
             "title": "VMA title",
@@ -72,8 +68,37 @@ class KrisinformationAdapterTest {
 
     assertEquals(2, items.size());
     assertEquals("news-1", items.get(0).id());
+    assertEquals("Full crisis message", items.get(0).bodyText());
     assertEquals("VMA title", items.get(1).headline());
     assertEquals(Instant.parse("2026-03-12T17:52:18Z"), items.get(1).publishedAt());
     assertNull(items.get(1).pushMessage());
+  }
+
+  @Test
+  void shouldStripHtmlFromKrisinformationText() throws Exception {
+    when(httpJsonClient.getJson("https://api.krisinformation.se/v2/aggregatedfeed")).thenReturn(objectMapper.readTree("""
+        [
+          {
+            "Identifier": "news-2",
+            "Headline": "VMA heading",
+            "Preamble": "<p>Ursprungligt meddelande:</p><p>Viktigt meddelande till allmänheten i Thoméegränd i Östersunds kommun.</p>",
+            "BodyText": "<p>Ursprungligt meddelande:</p><p>Viktigt meddelande till allmänheten i Thoméegränd i Östersunds kommun. Det brinner just nu i ett garage.</p>\\n\\nUppdatering 18 mars 03.00: Meddelandet gäller inte längre. Faran är över.",
+            "Area": [{ "Description": "Jämtlands län" }],
+            "Published": "2026-03-18T02:00:00Z",
+            "PushMessage": "Uppdatering 18 mars 03.00: Meddelandet gäller inte längre. Faran är över."
+          }
+        ]
+        """));
+
+    KrisinformationItem item = krisinformationAdapter.fetchKrisinformationItems().get(0);
+
+    assertEquals(
+        "Ursprungligt meddelande: Viktigt meddelande till allmänheten i Thoméegränd i Östersunds kommun. Det brinner just nu i ett garage. Uppdatering 18 mars 03.00: Meddelandet gäller inte längre. Faran är över.",
+        item.bodyText()
+    );
+    assertEquals(
+        "Ursprungligt meddelande: Viktigt meddelande till allmänheten i Thoméegränd i Östersunds kommun.",
+        item.preamble()
+    );
   }
 }

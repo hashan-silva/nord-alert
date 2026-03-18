@@ -127,12 +127,6 @@ function App() {
     };
   }, []);
 
-  const resourceOptions = useMemo(() => {
-    return Array.from(new Set(alerts.map((alert) => alert.source))).sort((left, right) =>
-      left.localeCompare(right)
-    );
-  }, [alerts]);
-
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
       const matchesResource =

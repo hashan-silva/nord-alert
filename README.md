@@ -3,8 +3,8 @@
 NordAlert is a web dashboard and backend platform that aggregates official alerts from Polisen (the Swedish Police Authority), SMHI (Swedish Meteorological and Hydrological Institute), and Krisinformation (Swedish Crisis Information).
 
 Current application versions:
-- Backend: `1.1.1`
-- Frontend: `1.1.1`
+- Backend: `1.2.0`
+- Frontend: `1.2.0`
 
 Live links:
 - Web dashboard: https://d233b3o4qrwfy2.cloudfront.net/
@@ -250,7 +250,7 @@ The backend retrieves information from a number of official Swedish services:
 
 - **Polisen events** – https://polisen.se/api/events
 - **SMHI impact-based warnings** – https://opendata-download-warnings.smhi.se/warnings/objects
-- **Krisinformation** – https://api.krisinformation.se/v3/news and https://api.krisinformation.se/v3/vmas
+- **Krisinformation** – https://api.krisinformation.se/v2/aggregatedfeed
 - **SCB PxWeb** – region lists (county and municipality codes/names)
 - **County Administrative Boards ArcGIS** – GeoJSON polygons for counties and municipalities
 

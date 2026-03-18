@@ -7,6 +7,7 @@ public record KrisinformationItem(
     String id,
     String headline,
     String preamble,
+    String bodyText,
     List<String> counties,
     Instant publishedAt,
     String url,

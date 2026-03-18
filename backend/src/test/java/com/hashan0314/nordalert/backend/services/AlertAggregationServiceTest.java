@@ -76,6 +76,7 @@ class AlertAggregationServiceTest {
             "k-1",
             "Crisis headline",
             "Crisis preamble",
+            "Full crisis message",
             List.of("Skåne län"),
             Instant.parse("2026-03-12T18:52:18Z"),
             "https://example.com/k-1",
@@ -88,6 +89,7 @@ class AlertAggregationServiceTest {
     assertEquals(3, alerts.size());
     assertEquals(List.of("s-1", "k-1", "p-1"), alerts.stream().map(Alert::id).toList());
     assertEquals(Severity.HIGH, alerts.get(0).severity());
+    assertEquals("Full crisis message\n\nCrisis preamble", alerts.get(1).description());
     assertEquals(59.0, alerts.get(2).latitude());
     assertEquals(18.0, alerts.get(2).longitude());
     assertEquals("Feature", alerts.get(0).geoJson().path("type").asText());

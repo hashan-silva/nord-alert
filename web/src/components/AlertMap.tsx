@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { AlertItem } from '../models/alert';
+import { countyCentroids } from '../lib/countyCentroids';
 import {
   formatSeverity,
   normalizeResourceKey,
@@ -51,6 +52,26 @@ function locationKey(alert: AlertItem) {
   }
 
   return `fallback:${alert.id}`;
+}
+
+function countyNamesFromText(value?: string) {
+  if (!value) {
+    return [];
+  }
+
+  return Object.keys(countyCentroids).filter((county) => value.includes(county));
+}
+
+function fallbackCountyNames(alert: AlertItem) {
+  const counties = new Set<string>();
+
+  alert.areas?.forEach((area) => {
+    countyNamesFromText(area).forEach((county) => counties.add(county));
+  });
+  countyNamesFromText(alert.headline).forEach((county) => counties.add(county));
+  countyNamesFromText(alert.description).forEach((county) => counties.add(county));
+
+  return Array.from(counties);
 }
 
 function popupContent(alerts: AlertItem[]) {
@@ -125,14 +146,33 @@ function AlertMap({ alerts }: AlertMapProps) {
     const groups = new Map<string, AlertItem[]>();
 
     alerts.forEach((alert) => {
-      if (!alert.geoJson && (typeof alert.latitude !== 'number' || typeof alert.longitude !== 'number')) {
+      if (alert.geoJson) {
+        const key = locationKey(alert);
+        const existing = groups.get(key) || [];
+        existing.push(alert);
+        groups.set(key, existing);
         return;
       }
 
-      const key = locationKey(alert);
-      const existing = groups.get(key) || [];
-      existing.push(alert);
-      groups.set(key, existing);
+      if (typeof alert.latitude === 'number' && typeof alert.longitude === 'number') {
+        const key = locationKey(alert);
+        const existing = groups.get(key) || [];
+        existing.push(alert);
+        groups.set(key, existing);
+        return;
+      }
+
+      fallbackCountyNames(alert).forEach((county) => {
+        const [latitude, longitude] = countyCentroids[county];
+        const key = `county:${county}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+        const existing = groups.get(key) || [];
+        existing.push({
+          ...alert,
+          latitude,
+          longitude
+        });
+        groups.set(key, existing);
+      });
     });
 
     return Array.from(groups.values()).map(sortAlertsByLatest);

@@ -1,0 +1,23 @@
+export const countyCentroids: Record<string, [number, number]> = {
+  'Blekinge län': [56.2784, 15.0180],
+  'Dalarnas län': [60.6769, 15.0060],
+  'Gotlands län': [57.4684, 18.4867],
+  'Gävleborgs län': [61.3012, 16.1534],
+  'Hallands län': [56.8967, 12.8034],
+  'Jämtlands län': [63.1712, 14.9592],
+  'Jönköpings län': [57.6331, 14.6917],
+  'Kalmar län': [57.2350, 16.1849],
+  'Kronobergs län': [56.7183, 14.4115],
+  'Norrbottens län': [66.8309, 20.3992],
+  'Skåne län': [55.9903, 13.5958],
+  'Stockholms län': [59.3330, 18.0658],
+  'Södermanlands län': [59.0336, 16.7519],
+  'Uppsala län': [60.0092, 17.7750],
+  'Värmlands län': [59.7294, 13.2354],
+  'Västerbottens län': [64.7899, 17.9313],
+  'Västernorrlands län': [63.4276, 17.7292],
+  'Västmanlands län': [59.6714, 16.2159],
+  'Västra Götalands län': [58.2528, 12.9730],
+  'Örebro län': [59.5350, 15.0066],
+  'Östergötlands län': [58.3454, 15.5198]
+};

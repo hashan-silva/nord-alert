@@ -201,6 +201,7 @@ body {
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.45;
+  white-space: pre-line;
 }
 
 .map-popup__link {
@@ -247,6 +248,10 @@ body {
   gap: 6px;
   align-items: center;
   font-weight: 700;
+}
+
+.alert-list__description {
+  white-space: pre-line;
 }
 
 .empty-state {

@@ -2,22 +2,13 @@ package com.hashan0314.nordalert.backend.config;
 
 public class KrisinformationApiProperties {
 
-  private String newsUrl;
-  private String vmasUrl;
+  private String aggregatedFeedUrl;
 
-  public String getNewsUrl() {
-    return newsUrl;
+  public String getAggregatedFeedUrl() {
+    return aggregatedFeedUrl;
   }
 
-  public void setNewsUrl(String newsUrl) {
-    this.newsUrl = newsUrl;
-  }
-
-  public String getVmasUrl() {
-    return vmasUrl;
-  }
-
-  public void setVmasUrl(String vmasUrl) {
-    this.vmasUrl = vmasUrl;
+  public void setAggregatedFeedUrl(String aggregatedFeedUrl) {
+    this.aggregatedFeedUrl = aggregatedFeedUrl;
   }
 }
