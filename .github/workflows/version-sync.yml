@@ -1,0 +1,105 @@
+name: Sync Versions From Root File
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'VERSION'
+  workflow_dispatch:
+
+concurrency:
+  group: version-sync-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Sync versioned files from VERSION
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import json
+          import pathlib
+          import re
+
+          root = pathlib.Path(".")
+          version = (root / "VERSION").read_text(encoding="utf-8").strip()
+
+          if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+            raise SystemExit(f"VERSION must be semver-like (x.y.z), got: {version}")
+
+          def replace_regex(path_str, pattern, repl, *, flags=0):
+            path = root / path_str
+            original = path.read_text(encoding="utf-8")
+            updated, count = re.subn(pattern, repl, original, flags=flags)
+            if count == 0:
+              raise SystemExit(f"No matches found for {path_str}")
+            path.write_text(updated, encoding="utf-8")
+
+          def update_json_version(path_str, pointer):
+            path = root / path_str
+            data = json.loads(path.read_text(encoding="utf-8"))
+            target = data
+            for key in pointer[:-1]:
+              target = target[key]
+            target[pointer[-1]] = version
+            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+          update_json_version("web/package.json", ["version"])
+          update_json_version("web/package-lock.json", ["version"])
+          update_json_version("web/package-lock.json", ["packages", "", "version"])
+          update_json_version("mobile/package.json", ["version"])
+          update_json_version("mobile/package-lock.json", ["version"])
+          update_json_version("mobile/package-lock.json", ["packages", "", "version"])
+          update_json_version("mobile/app.json", ["expo", "version"])
+
+          replace_regex(
+            "backend/pom.xml",
+            r"(<artifactId>backend</artifactId>\s*<version>)([^<]+)(</version>)",
+            rf"\g<1>{version}\g<3>",
+            flags=re.S,
+          )
+          replace_regex(
+            "backend/src/main/java/com/hashan0314/nordalert/backend/config/OpenApiConfig.java",
+            r'(\.version\(")([^"]+)("\))',
+            rf'\g<1>{version}\g<3>',
+          )
+          replace_regex(
+            "README.md",
+            r"(Current application version: `)([^`]+)(`)",
+            rf"\g<1>{version}\g<3>",
+          )
+          replace_regex(
+            "mobile/src/lib/version.ts",
+            r"(export const appVersion = ')([^']+)(';)",
+            rf"\g<1>{version}\g<3>",
+          )
+          PY
+
+      - name: Commit synced versions
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No version changes were necessary."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION README.md backend/pom.xml backend/src/main/java/com/hashan0314/nordalert/backend/config/OpenApiConfig.java web/package.json web/package-lock.json mobile/package.json mobile/package-lock.json mobile/app.json mobile/src/lib/version.ts
+          git commit -m "chore: sync versions from VERSION"
+          git push
