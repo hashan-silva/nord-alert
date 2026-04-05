@@ -155,7 +155,7 @@ resource "aws_lambda_function" "backend" {
 
   environment {
     variables = {
-      SUBSCRIPTION_TABLE_NAME  = aws_dynamodb_table.subscriptions.name
+      SUBSCRIPTION_TABLE_NAME   = aws_dynamodb_table.subscriptions.name
       SUBSCRIPTION_SENDER_EMAIL = var.ses_sender_email
     }
   }
@@ -178,7 +178,7 @@ resource "aws_lambda_function" "subscription_dispatcher" {
 
   environment {
     variables = {
-      SUBSCRIPTION_TABLE_NAME  = aws_dynamodb_table.subscriptions.name
+      SUBSCRIPTION_TABLE_NAME   = aws_dynamodb_table.subscriptions.name
       SUBSCRIPTION_SENDER_EMAIL = var.ses_sender_email
     }
   }
