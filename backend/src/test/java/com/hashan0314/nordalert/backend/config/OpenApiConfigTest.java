@@ -14,6 +14,6 @@ class OpenApiConfigTest {
     OpenAPI openAPI = config.nordAlertOpenApi();
 
     assertEquals("NordAlert Backend API", openAPI.getInfo().getTitle());
-    assertEquals("1.2.0", openAPI.getInfo().getVersion());
+    assertEquals("2.0.0", openAPI.getInfo().getVersion());
   }
 }

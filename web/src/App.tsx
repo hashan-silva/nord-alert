@@ -42,8 +42,7 @@ import type { AlertItem } from './models/alert';
 import type { CountyItem } from './models/county';
 import type { SubscriptionItem } from './models/subscription';
 
-const webVersion = process.env.REACT_APP_WEB_VERSION || 'unknown';
-const backendVersion = process.env.REACT_APP_BACKEND_VERSION || 'unknown';
+const appVersion = process.env.REACT_APP_WEB_VERSION || 'unknown';
 
 const severityOptions = [
   { label: 'All severities', value: '' },
@@ -485,7 +484,7 @@ function App() {
 
         <Box className="app-footer">
           <Typography color="text.secondary" variant="body2">
-            NordAlert © Shermal Hashan Silva · Web {webVersion} · Backend {backendVersion}
+            NordAlert © Shermal Hashan Silva · Version {appVersion}
           </Typography>
         </Box>
 

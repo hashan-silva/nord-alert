@@ -31,8 +31,6 @@ locals {
   web_access_logs_bucket_name = lower("${local.name_prefix}-web-access-logs")
 }
 
-data "aws_caller_identity" "current" {}
-
 data "aws_ecr_repository" "lambda" {
   name = var.ecr_repository_name
 }
@@ -155,7 +153,7 @@ resource "aws_lambda_function" "backend" {
 
   environment {
     variables = {
-      SUBSCRIPTION_TABLE_NAME  = aws_dynamodb_table.subscriptions.name
+      SUBSCRIPTION_TABLE_NAME   = aws_dynamodb_table.subscriptions.name
       SUBSCRIPTION_SENDER_EMAIL = var.ses_sender_email
     }
   }
@@ -178,7 +176,7 @@ resource "aws_lambda_function" "subscription_dispatcher" {
 
   environment {
     variables = {
-      SUBSCRIPTION_TABLE_NAME  = aws_dynamodb_table.subscriptions.name
+      SUBSCRIPTION_TABLE_NAME   = aws_dynamodb_table.subscriptions.name
       SUBSCRIPTION_SENDER_EMAIL = var.ses_sender_email
     }
   }

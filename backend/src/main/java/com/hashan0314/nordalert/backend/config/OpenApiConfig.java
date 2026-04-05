@@ -13,7 +13,7 @@ public class OpenApiConfig {
     return new OpenAPI()
         .info(new Info()
             .title("NordAlert Backend API")
-            .version("1.2.0")
+            .version("2.0.0")
             .description("Aggregated public alert feed for NordAlert clients."));
   }
 }

@@ -127,6 +127,7 @@ app.*.symbols
 !/dev/ci/**/Gemfile.lock
 package-lock.json
 !web/package-lock.json
+!mobile/package-lock.json
 
 # Terraform
 .terraform/
