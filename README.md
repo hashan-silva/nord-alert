@@ -19,6 +19,7 @@ Live links:
 [![Trivy IaC Scan](https://github.com/hashan-silva/nord-alert/actions/workflows/tfsec.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/tfsec.yml)
 [![Publish Docker Hub Images](https://github.com/hashan-silva/nord-alert/actions/workflows/dockerhub.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/dockerhub.yml)
 [![Web CI](https://github.com/hashan-silva/nord-alert/actions/workflows/web-ci.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/web-ci.yml)
+[![Mobile CI](https://github.com/hashan-silva/nord-alert/actions/workflows/mobile-ci.yml/badge.svg)](https://github.com/hashan-silva/nord-alert/actions/workflows/mobile-ci.yml)
 
 ## Features
 
@@ -230,6 +231,34 @@ The dashboard expects alert items shaped like:
 { "id": "1", "source": "POLISEN", "headline": "...", "description": "...", "areas": ["Stockholms län"], "severity": "high", "publishedAt": "2026-03-12T16:52:18Z", "url": "https://example.com" }
 ```
 
+### Mobile App
+
+The mobile app in `mobile/` is an Expo + React Native client backed by the same `/alerts` and `/counties` APIs.
+
+```bash
+cd mobile
+npm install
+cp .env.example .env
+npm run android
+```
+
+Set `EXPO_PUBLIC_BACKEND_BASE_URL` to the backend base URL without a trailing slash.
+
+For the Android emulator talking to a backend running on the same machine, use:
+
+```bash
+EXPO_PUBLIC_BACKEND_BASE_URL=http://10.0.2.2:8080
+```
+
+For a physical Android device, use the host machine IP reachable from that device.
+
+The mobile app includes:
+
+- Live alert feed backed by `/alerts`
+- Severity filter
+- County filter chips backed by `/counties`
+- Pull to refresh and loading/error states
+
 ### Docker Compose
 
 You can run the backend and web dashboard together locally with Docker Compose:
@@ -258,7 +287,7 @@ The backend retrieves information from a number of official Swedish services:
 
 GitHub Actions builds the backend Docker image, pushes it to Docker Hub and Amazon ECR, deploys the backend to AWS Lambda plus API Gateway via Terraform, then builds and publishes the React dashboard to S3 behind CloudFront.
 
-- Workflows: Deploy (`deploy.yml`), Sonar (`build.yml`), Terraform lint/validate, tfsec (SARIF → Code Scanning), and Web CI for `web/`.
+- Workflows: Deploy (`deploy.yml`), Sonar (`build.yml`), Terraform lint/validate, tfsec (SARIF → Code Scanning), Web CI for `web/`, and Mobile CI for `mobile/`.
 - Terraform: provisions the Lambda backend, a scheduled Lambda dispatcher, API Gateway HTTP API, DynamoDB, SES sender identity, S3 frontend bucket, and CloudFront distribution.
 - Docker: builds a standard Java 17 backend image from `backend/Dockerfile`, a Lambda-compatible image for ECR from `backend/Dockerfile.lambda`, and a web image from `web/Dockerfile`.
 - Secrets required: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `TF_API_TOKEN`, `SES_SENDER_EMAIL`.
