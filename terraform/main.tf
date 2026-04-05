@@ -31,8 +31,6 @@ locals {
   web_access_logs_bucket_name = lower("${local.name_prefix}-web-access-logs")
 }
 
-data "aws_caller_identity" "current" {}
-
 data "aws_ecr_repository" "lambda" {
   name = var.ecr_repository_name
 }
