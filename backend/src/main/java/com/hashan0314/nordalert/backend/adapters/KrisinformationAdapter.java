@@ -107,13 +107,83 @@ public class KrisinformationAdapter {
       return "";
     }
 
-    String text = Jsoup.parse(value).text();
-    return text
-        .replace("\u00A0", " ")
-        .replaceAll("\\s*\\n\\s*", "\n")
-        .replaceAll("(?m)[ \\t]+", " ")
-        .replaceAll("\\n{3,}", "\n\n")
-        .trim();
+    String text = extractTextContent(value).replace('\u00A0', ' ');
+    StringBuilder normalized = new StringBuilder(text.length());
+    int consecutiveNewlines = 0;
+    boolean pendingSpace = false;
+
+    for (int index = 0; index < text.length(); index++) {
+      char current = text.charAt(index);
+
+      if (shouldSkip(current)) {
+        // Ignore carriage returns and keep processing the remaining content.
+      } else if (current == '\n') {
+        trimTrailingSpace(normalized);
+        consecutiveNewlines = appendNormalizedNewline(normalized, consecutiveNewlines);
+        pendingSpace = false;
+      } else if (isInlineWhitespace(current)) {
+        pendingSpace = shouldQueueSpace(normalized, consecutiveNewlines);
+      } else {
+        if (pendingSpace) {
+          normalized.append(' ');
+        }
+
+        normalized.append(current);
+        consecutiveNewlines = 0;
+        pendingSpace = false;
+      }
+    }
+
+    return trimTrailingWhitespace(normalized);
+  }
+
+  private static String extractTextContent(String value) {
+    if (looksLikeHtml(value)) {
+      return Jsoup.parse(value).text();
+    }
+    return value;
+  }
+
+  private static boolean looksLikeHtml(String value) {
+    return value.indexOf('<') >= 0 && value.indexOf('>') >= 0;
+  }
+
+  private static boolean shouldSkip(char current) {
+    return current == '\r';
+  }
+
+  private static boolean isInlineWhitespace(char current) {
+    return current == ' ' || current == '\t';
+  }
+
+  private static boolean shouldQueueSpace(StringBuilder normalized, int consecutiveNewlines) {
+    return normalized.length() > 0 && consecutiveNewlines == 0;
+  }
+
+  private static void trimTrailingSpace(StringBuilder normalized) {
+    int length = normalized.length();
+    if (length > 0 && normalized.charAt(length - 1) == ' ') {
+      normalized.setLength(length - 1);
+    }
+  }
+
+  private static int appendNormalizedNewline(StringBuilder normalized, int consecutiveNewlines) {
+    if (consecutiveNewlines < 2) {
+      normalized.append('\n');
+    }
+    return consecutiveNewlines + 1;
+  }
+
+  private static String trimTrailingWhitespace(StringBuilder normalized) {
+    int end = normalized.length();
+    while (end > 0 && isTrimmedWhitespace(normalized.charAt(end - 1))) {
+      end--;
+    }
+    return normalized.substring(0, end);
+  }
+
+  private static boolean isTrimmedWhitespace(char current) {
+    return current == ' ' || current == '\n' || current == '\t';
   }
 
   private static boolean isMissingOrNull(JsonNode... nodes) {
