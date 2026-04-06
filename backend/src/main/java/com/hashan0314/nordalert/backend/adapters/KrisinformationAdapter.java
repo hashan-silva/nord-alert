@@ -107,13 +107,57 @@ public class KrisinformationAdapter {
       return "";
     }
 
-    String text = Jsoup.parse(value).text();
-    return text
-        .replace("\u00A0", " ")
-        .replaceAll("\\s*\\n\\s*", "\n")
-        .replaceAll("(?m)[ \\t]+", " ")
-        .replaceAll("\\n{3,}", "\n\n")
-        .trim();
+    String text = Jsoup.parse(value).text().replace('\u00A0', ' ');
+    StringBuilder normalized = new StringBuilder(text.length());
+    int consecutiveNewlines = 0;
+    boolean pendingSpace = false;
+
+    for (int index = 0; index < text.length(); index++) {
+      char current = text.charAt(index);
+
+      if (current == '\r') {
+        continue;
+      }
+
+      if (current == '\n') {
+        int length = normalized.length();
+        if (length > 0 && normalized.charAt(length - 1) == ' ') {
+          normalized.setLength(length - 1);
+        }
+
+        if (consecutiveNewlines < 2) {
+          normalized.append('\n');
+        }
+
+        consecutiveNewlines++;
+        pendingSpace = false;
+        continue;
+      }
+
+      if (current == ' ' || current == '\t') {
+        pendingSpace = normalized.length() > 0 && consecutiveNewlines == 0;
+        continue;
+      }
+
+      if (pendingSpace) {
+        normalized.append(' ');
+      }
+
+      normalized.append(current);
+      consecutiveNewlines = 0;
+      pendingSpace = false;
+    }
+
+    int end = normalized.length();
+    while (end > 0) {
+      char current = normalized.charAt(end - 1);
+      if (current != ' ' && current != '\n' && current != '\t') {
+        break;
+      }
+      end--;
+    }
+
+    return normalized.substring(0, end);
   }
 
   private static boolean isMissingOrNull(JsonNode... nodes) {

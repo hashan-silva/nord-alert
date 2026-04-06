@@ -17,11 +17,28 @@ function resolveBackendVersion() {
   }
 
   const backendPom = fs.readFileSync(backendPomPath, 'utf8');
-  const backendVersionMatch = backendPom.match(
-    /<artifactId>backend<\/artifactId>\s*<version>([^<]+)<\/version>/s
-  );
+  const artifactIdTag = '<artifactId>backend</artifactId>';
+  const versionStartTag = '<version>';
+  const versionEndTag = '</version>';
+  const artifactIdIndex = backendPom.indexOf(artifactIdTag);
 
-  return backendVersionMatch ? backendVersionMatch[1] : 'unknown';
+  if (artifactIdIndex === -1) {
+    return 'unknown';
+  }
+
+  const versionStartIndex = backendPom.indexOf(versionStartTag, artifactIdIndex + artifactIdTag.length);
+  if (versionStartIndex === -1) {
+    return 'unknown';
+  }
+
+  const versionValueStart = versionStartIndex + versionStartTag.length;
+  const versionEndIndex = backendPom.indexOf(versionEndTag, versionValueStart);
+  if (versionEndIndex === -1) {
+    return 'unknown';
+  }
+
+  const version = backendPom.slice(versionValueStart, versionEndIndex).trim();
+  return version.length > 0 ? version : 'unknown';
 }
 
 const backendVersion = resolveBackendVersion();
