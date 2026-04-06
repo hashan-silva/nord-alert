@@ -116,28 +116,22 @@ public class KrisinformationAdapter {
       char current = text.charAt(index);
 
       if (shouldSkip(current)) {
-        continue;
-      }
-
-      if (current == '\n') {
+        // Ignore carriage returns and keep processing the remaining content.
+      } else if (current == '\n') {
         trimTrailingSpace(normalized);
         consecutiveNewlines = appendNormalizedNewline(normalized, consecutiveNewlines);
         pendingSpace = false;
-        continue;
-      }
-
-      if (isInlineWhitespace(current)) {
+      } else if (isInlineWhitespace(current)) {
         pendingSpace = shouldQueueSpace(normalized, consecutiveNewlines);
-        continue;
-      }
+      } else {
+        if (pendingSpace) {
+          normalized.append(' ');
+        }
 
-      if (pendingSpace) {
-        normalized.append(' ');
+        normalized.append(current);
+        consecutiveNewlines = 0;
+        pendingSpace = false;
       }
-
-      normalized.append(current);
-      consecutiveNewlines = 0;
-      pendingSpace = false;
     }
 
     return trimTrailingWhitespace(normalized);
