@@ -101,4 +101,27 @@ class KrisinformationAdapterTest {
         item.preamble()
     );
   }
+
+  @Test
+  void shouldNormalizeWhitespaceInKrisinformationText() throws Exception {
+    when(httpJsonClient.getJson("https://api.krisinformation.se/v2/aggregatedfeed")).thenReturn(objectMapper.readTree("""
+        [
+          {
+            "Identifier": "news-3",
+            "Headline": "Whitespace test",
+            "Preamble": "  Intro\\r\\n\\tNext line\\n\\n\\nThird\\u00A0line   ",
+            "BodyText": "Alpha\\t\\tBeta \\n  Gamma\\r\\n\\n\\n\\nDelta\\u00A0\\u00A0Epsilon   \\n\\n",
+            "Area": [{ "Description": "Västra Götalands län" }],
+            "Published": "2026-03-20T10:00:00Z",
+            "PushMessage": "\\tPush\\u00A0message \\r\\n  continued   "
+          }
+        ]
+        """));
+
+    KrisinformationItem item = krisinformationAdapter.fetchKrisinformationItems().get(0);
+
+    assertEquals("Intro\nNext line\n\nThird line", item.preamble());
+    assertEquals("Alpha Beta\nGamma\n\nDelta Epsilon", item.bodyText());
+    assertEquals("Push message\ncontinued", item.pushMessage());
+  }
 }
