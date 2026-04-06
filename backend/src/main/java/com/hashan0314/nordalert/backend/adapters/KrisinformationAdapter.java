@@ -107,7 +107,7 @@ public class KrisinformationAdapter {
       return "";
     }
 
-    String text = Jsoup.parse(value).text().replace('\u00A0', ' ');
+    String text = extractTextContent(value).replace('\u00A0', ' ');
     StringBuilder normalized = new StringBuilder(text.length());
     int consecutiveNewlines = 0;
     boolean pendingSpace = false;
@@ -141,6 +141,17 @@ public class KrisinformationAdapter {
     }
 
     return trimTrailingWhitespace(normalized);
+  }
+
+  private static String extractTextContent(String value) {
+    if (looksLikeHtml(value)) {
+      return Jsoup.parse(value).text();
+    }
+    return value;
+  }
+
+  private static boolean looksLikeHtml(String value) {
+    return value.indexOf('<') >= 0 && value.indexOf('>') >= 0;
   }
 
   private static boolean shouldSkip(char current) {
