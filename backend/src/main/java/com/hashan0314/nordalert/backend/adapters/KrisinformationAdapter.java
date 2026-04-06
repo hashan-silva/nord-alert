@@ -115,27 +115,19 @@ public class KrisinformationAdapter {
     for (int index = 0; index < text.length(); index++) {
       char current = text.charAt(index);
 
-      if (current == '\r') {
+      if (shouldSkip(current)) {
         continue;
       }
 
       if (current == '\n') {
-        int length = normalized.length();
-        if (length > 0 && normalized.charAt(length - 1) == ' ') {
-          normalized.setLength(length - 1);
-        }
-
-        if (consecutiveNewlines < 2) {
-          normalized.append('\n');
-        }
-
-        consecutiveNewlines++;
+        trimTrailingSpace(normalized);
+        consecutiveNewlines = appendNormalizedNewline(normalized, consecutiveNewlines);
         pendingSpace = false;
         continue;
       }
 
-      if (current == ' ' || current == '\t') {
-        pendingSpace = normalized.length() > 0 && consecutiveNewlines == 0;
+      if (isInlineWhitespace(current)) {
+        pendingSpace = shouldQueueSpace(normalized, consecutiveNewlines);
         continue;
       }
 
@@ -148,16 +140,45 @@ public class KrisinformationAdapter {
       pendingSpace = false;
     }
 
+    return trimTrailingWhitespace(normalized);
+  }
+
+  private static boolean shouldSkip(char current) {
+    return current == '\r';
+  }
+
+  private static boolean isInlineWhitespace(char current) {
+    return current == ' ' || current == '\t';
+  }
+
+  private static boolean shouldQueueSpace(StringBuilder normalized, int consecutiveNewlines) {
+    return normalized.length() > 0 && consecutiveNewlines == 0;
+  }
+
+  private static void trimTrailingSpace(StringBuilder normalized) {
+    int length = normalized.length();
+    if (length > 0 && normalized.charAt(length - 1) == ' ') {
+      normalized.setLength(length - 1);
+    }
+  }
+
+  private static int appendNormalizedNewline(StringBuilder normalized, int consecutiveNewlines) {
+    if (consecutiveNewlines < 2) {
+      normalized.append('\n');
+    }
+    return consecutiveNewlines + 1;
+  }
+
+  private static String trimTrailingWhitespace(StringBuilder normalized) {
     int end = normalized.length();
-    while (end > 0) {
-      char current = normalized.charAt(end - 1);
-      if (current != ' ' && current != '\n' && current != '\t') {
-        break;
-      }
+    while (end > 0 && isTrimmedWhitespace(normalized.charAt(end - 1))) {
       end--;
     }
-
     return normalized.substring(0, end);
+  }
+
+  private static boolean isTrimmedWhitespace(char current) {
+    return current == ' ' || current == '\n' || current == '\t';
   }
 
   private static boolean isMissingOrNull(JsonNode... nodes) {
