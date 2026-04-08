@@ -64,6 +64,21 @@ This document adapts the sample agent guidelines for a Java backend, a React web
 - Security: `tfsec .`
 - Plan/apply: `terraform plan && terraform apply` (use a remote backend for idempotent CI applies)
 
+## Security — Prevent OWASP Top 10 Issues
+- Treat OWASP Top 10 prevention as a default engineering requirement for every change, not a later review step.
+- Validate and normalize all backend inputs at controller boundaries. Reject malformed, oversized, or unexpected input early and explicitly.
+- Enforce authorization on every state-changing or data-revealing endpoint. Do not rely on client-side checks for access control.
+- Never build queries, paths, commands, HTML, or JSON fragments through unsafe string concatenation when untrusted input is involved.
+- Escape or sanitize untrusted content before rendering it into HTML, emails, logs, or generated documents. Prefer safe framework APIs over manual string assembly.
+- Keep secrets, tokens, API keys, and credentials out of source, logs, test fixtures, Terraform variables files, and client bundles. Use environment variables and GitHub Secrets.
+- Do not expose internal stack traces, raw exception messages, infrastructure identifiers, or sensitive config values in API responses.
+- Prefer maintained dependencies and pinned versions. When updating dependencies, consider whether the change addresses known security issues or introduces risky transitive packages.
+- Use secure defaults in Terraform and AWS resources: least-privilege IAM, encryption at rest, restricted public access, explicit logging, and narrowly scoped network/resource policies.
+- For web and mobile clients, assume all client input is attacker-controlled. Do not trust hidden fields, local state, query params, or device-side filtering for security decisions.
+- Avoid insecure deserialization and unsafe dynamic evaluation. Do not introduce reflection-based object loading, script execution, or parsing of untrusted serialized objects without a strong reason and explicit validation.
+- Add or update tests for security-sensitive behavior when touching validation, authentication, authorization, serialization, HTML rendering, configuration, or infrastructure policies.
+- If a task touches auth, input parsing, HTML/email rendering, secrets, or public infrastructure exposure, call out the security impact explicitly in the final summary.
+
 ## Mandatory Validation (Before Finishing a Task)
 Perform the checks relevant to the files you changed:
 
